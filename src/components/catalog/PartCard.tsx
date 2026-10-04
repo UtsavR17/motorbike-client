@@ -11,7 +11,7 @@ export function partHref(partId: number, brandId: number): string {
 export function PartCard({ product }: { product: PartProduct }) {
   return (
     <article className="card group relative flex h-full flex-col overflow-hidden transition-shadow hover:shadow-md">
-      <div className="relative aspect-[4/3] border-b border-line bg-card">
+      <div className="relative aspect-[16/9] border-b border-line bg-card sm:aspect-[4/3]">
         <ProductImage src={product.image_url} alt={product.part_name} />
       </div>
       <div className="flex flex-1 flex-col gap-2 p-4">

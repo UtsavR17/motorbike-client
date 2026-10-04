@@ -16,11 +16,11 @@ export function ActiveFilters({ chips, clearHref }: { chips: FilterChip[]; clear
         <Link
           key={chip.key}
           href={chip.removeHref}
+          aria-label={`Remove filter: ${chip.label}`}
           className="inline-flex items-center gap-1.5 rounded-full border border-line bg-card py-1 pl-3 pr-2 text-sm font-medium hover:border-ink"
         >
           {chip.label}
           <X aria-hidden="true" className="h-3.5 w-3.5" />
-          <span className="sr-only">(remove filter)</span>
         </Link>
       ))}
       <Link href={clearHref} className="link px-1 text-sm">

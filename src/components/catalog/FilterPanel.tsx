@@ -21,7 +21,12 @@ export function FilterPanel({ children, activeCount }: { children: ReactNode; ac
         <SlidersHorizontal aria-hidden="true" className="h-4 w-4" />
         {open ? 'Hide filters' : 'Show filters'}
         {activeCount > 0 && (
-          <span className="rounded-full bg-accent px-2 text-xs text-ink">{activeCount}</span>
+          <>
+            <span aria-hidden="true" className="rounded-full bg-accent px-2 text-xs text-ink">
+              {activeCount}
+            </span>
+            <span className="sr-only">({activeCount} active)</span>
+          </>
         )}
       </button>
       <div id="filter-panel" className={`${open ? 'mt-3 block' : 'hidden'} lg:mt-0 lg:block`}>

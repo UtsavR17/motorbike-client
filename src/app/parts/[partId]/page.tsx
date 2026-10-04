@@ -111,7 +111,7 @@ export default async function PartDetailPage({ params, searchParams }: PartPageP
       />
 
       <div className="mt-4 grid gap-6 lg:grid-cols-2 lg:gap-10">
-        <div className="card relative aspect-square overflow-hidden lg:sticky lg:top-32 lg:self-start">
+        <div className="card relative aspect-[4/3] overflow-hidden lg:sticky lg:top-32 lg:aspect-square lg:self-start">
           <ProductImage
             src={selected.image_url}
             alt={`${selected.part_name} by ${selected.brand}`}

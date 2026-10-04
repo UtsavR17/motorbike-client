@@ -78,7 +78,6 @@ export default async function BikeDetailPage({ params }: BikePageProps) {
 
   const specs = summary
     ? [
-        { label: 'Price', value: formatPriceRange(summary.min_price, summary.max_price) },
         { label: 'Units available', value: String(summary.units_available) },
         { label: 'Model year', value: formatRange(summary.min_year, summary.max_year) },
         { label: 'Engine', value: formatRange(summary.min_engine_cc, summary.max_engine_cc, 'cc') },
@@ -108,8 +107,11 @@ export default async function BikeDetailPage({ params }: BikePageProps) {
 
           {specs.length > 0 && (
             <dl className="card grid grid-cols-1 gap-px overflow-hidden bg-line sm:grid-cols-2">
-              {specs.map((s) => (
-                <div key={s.label} className="bg-card p-4">
+              {specs.map((s, i) => (
+                <div
+                  key={s.label}
+                  className={`bg-card p-4 ${i === specs.length - 1 && specs.length % 2 === 1 ? 'sm:col-span-2' : ''}`}
+                >
                   <dt className="text-sm text-ink-muted">{s.label}</dt>
                   <dd className="mt-1 font-semibold">{s.value}</dd>
                 </div>
@@ -178,7 +180,7 @@ export default async function BikeDetailPage({ params }: BikePageProps) {
                 </thead>
                 <tbody className="divide-y divide-line">
                   {units.map((u, i) => (
-                    <tr key={u.bike_id} className="align-top">
+                    <tr key={i} className="align-top">
                       <td className="px-4 py-4 font-medium">{u.color ?? 'Not listed'}</td>
                       <td className="px-4 py-4">{u.year ?? 'Not listed'}</td>
                       <td className="px-4 py-4">{u.engine_cc ? `${u.engine_cc} cc` : 'Not listed'}</td>
@@ -199,7 +201,7 @@ export default async function BikeDetailPage({ params }: BikePageProps) {
             {/* Small screens: one card per unit */}
             <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:hidden">
               {units.map((u, i) => (
-                <li key={u.bike_id} className="card p-4">
+                <li key={i} className="card p-4">
                   <div className="flex items-start justify-between gap-3">
                     <p className="font-semibold">
                       {u.color ?? 'Colour not listed'}
