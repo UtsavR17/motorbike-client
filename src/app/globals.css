@@ -1,26 +1,85 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+  Design tokens. Same identity as the Admin Panel: charcoal + orange, white cards,
+  light grey page. Change a value here and every component follows.
+  Text on orange uses the charcoal ink colour for WCAG AA contrast;
+  orange text on white uses the darker accent-strong shade.
+*/
+@theme {
+  --color-ink: #1a2332;
+  --color-ink-soft: #243044;
+  --color-ink-muted: #5b6472;
+  --color-accent: #e67e22;
+  --color-accent-hover: #f39c4b;
+  --color-accent-strong: #b45309;
+  --color-accent-soft: #fdf0e3;
+  --color-page: #f5f6f8;
+  --color-card: #ffffff;
+  --color-line: #e5e7eb;
+
+  --color-ok: #166534;
+  --color-ok-soft: #dcfce7;
+  --color-warn: #92400e;
+  --color-warn-soft: #fef3c7;
+  --color-bad: #b91c1c;
+  --color-bad-soft: #fee2e2;
+
+  --radius-card: 0.75rem;
+  --radius-control: 0.5rem;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-page text-ink antialiased;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-accent);
+    outline-offset: 2px;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@utility container-page {
+  @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+}
+
+@utility card {
+  @apply rounded-card border border-line bg-card;
+}
+
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-control px-4 py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed;
+}
+
+@utility btn-primary {
+  @apply btn bg-accent text-ink hover:bg-accent-hover disabled:bg-line disabled:text-ink-muted;
+}
+
+@utility btn-dark {
+  @apply btn bg-ink text-white hover:bg-ink-soft disabled:bg-line disabled:text-ink-muted;
+}
+
+@utility btn-outline {
+  @apply btn border border-line bg-card text-ink hover:border-ink;
+}
+
+@utility field {
+  @apply block w-full rounded-control border border-line bg-card px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-accent;
+}
+
+@utility field-label {
+  @apply mb-1 block text-sm font-medium text-ink;
+}
+
+@utility link {
+  @apply font-medium text-accent-strong underline-offset-4 hover:underline;
 }
