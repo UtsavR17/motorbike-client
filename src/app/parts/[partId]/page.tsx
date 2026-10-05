@@ -243,7 +243,7 @@ export default async function PartDetailPage({ params, searchParams }: PartPageP
               </li>
             </ul>
             <p className="mt-3 text-xs text-ink-muted">
-              Low stock means fewer than {LOW_STOCK_THRESHOLD} left. Stock levels update as orders come in.
+              Low stock means {LOW_STOCK_THRESHOLD} or fewer left. Stock levels update as orders come in.
             </p>
           </section>
 

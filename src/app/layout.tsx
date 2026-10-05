@@ -16,8 +16,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={inter.variable}>
-      <body className="flex min-h-screen flex-col font-sans">
+    // suppressHydrationWarning: browser extensions inject attributes before React loads (dev-only warning, not an app bug).
+    <html lang="en" className={inter.variable} suppressHydrationWarning>
+      <body className="flex min-h-screen flex-col font-sans" suppressHydrationWarning>
         <a
           href="#main"
           className="sr-only z-50 rounded-control bg-accent px-4 py-2 font-semibold text-ink focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
