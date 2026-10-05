@@ -31,8 +31,8 @@ export function SiteFooter() {
               </li>
             ))}
             <li>
-              <Link href="/login" className="hover:text-accent">
-                Sign in
+              <Link href="/account" className="hover:text-accent">
+                My account
               </Link>
             </li>
           </ul>

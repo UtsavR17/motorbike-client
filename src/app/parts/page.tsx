@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { Bike, PackageSearch } from 'lucide-react';
+import { Bike, PackageSearch, Warehouse } from 'lucide-react';
 import { ActiveFilters, type FilterChip } from '@/components/catalog/ActiveFilters';
 import { FilterPanel } from '@/components/catalog/FilterPanel';
 import { PartCard } from '@/components/catalog/PartCard';
@@ -12,6 +12,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { PageIntro } from '@/components/ui/PageIntro';
 import { Pagination, ResultCount } from '@/components/ui/Pagination';
 import { PAGE_SIZE } from '@/config/shop';
+import { getGarageChips } from '@/lib/account/garage';
 import { getBrands, getCategories, getModels } from '@/lib/catalog/lookups';
 import { listPartProducts } from '@/lib/catalog/parts';
 import { formatMoney } from '@/lib/format';
@@ -32,10 +33,11 @@ export const metadata: Metadata = {
 
 export default async function PartsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const parsed = parsePartsQuery(await searchParams);
-  const [categories, brands, models] = await Promise.all([
+  const [categories, brands, models, garage] = await Promise.all([
     getCategories(),
     getBrands(),
     parsed.model ? getModels() : Promise.resolve([]),
+    getGarageChips(),
   ]);
 
   // Ids that do not match a known category, brand or model are ignored.
@@ -76,6 +78,32 @@ export default async function PartsPage({ searchParams }: { searchParams: Promis
         description="Genuine parts with live stock levels. Order online soon; for now, browse and check availability."
         crumbs={[{ href: '/', label: 'Home' }, { label: 'Parts' }]}
       />
+
+      {garage.length > 0 && (
+        <section aria-labelledby="garage-heading" className="container-page pt-6">
+          <div className="card flex flex-wrap items-center gap-2 p-3">
+            <h2 id="garage-heading" className="flex items-center gap-1.5 pr-1 text-sm font-semibold">
+              <Warehouse aria-hidden="true" className="h-4 w-4 text-accent-strong" />
+              My garage:
+            </h2>
+            {garage.map((chip) => {
+              const active = query.model === chip.modelId && (query.year ?? null) === chip.year;
+              return (
+                <Link
+                  key={`${chip.modelId}-${chip.year ?? ''}`}
+                  href={partsHref(query, { model: chip.modelId, year: chip.year ?? undefined, page: 1 })}
+                  aria-current={active ? 'true' : undefined}
+                  className={`rounded-full border px-3 py-1 text-sm font-medium transition-colors ${
+                    active ? 'border-ink bg-ink text-white' : 'border-line bg-card hover:border-ink'
+                  }`}
+                >
+                  {chip.label}
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       <div className="container-page grid gap-6 py-6 lg:grid-cols-[260px_1fr] lg:gap-8 lg:py-8">
         <aside aria-label="Filters">

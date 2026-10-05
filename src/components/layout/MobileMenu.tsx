@@ -2,14 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, UserRound, X } from 'lucide-react';
+import { Bike, LayoutDashboard, LogOut, Menu, UserRound, UserRoundPlus, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { signOutAction } from '@/lib/actions/auth';
 import { HeaderSearch } from './HeaderSearch';
 import { isActivePath } from './NavLinks';
 import { NAV_LINKS } from './nav';
 
-/** Hamburger menu for small screens: search, navigation and sign in. */
-export function MobileMenu() {
+/** Hamburger menu for small screens: search, navigation and account links. */
+export function MobileMenu({ accountName }: { accountName: string | null }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -28,6 +29,7 @@ export function MobileMenu() {
   }, [open]);
 
   const close = () => setOpen(false);
+  const accountLink = 'flex items-center gap-2 py-3 text-left text-base font-medium text-white hover:text-accent';
 
   return (
     <div className="lg:hidden">
@@ -69,16 +71,45 @@ export function MobileMenu() {
                   </li>
                 );
               })}
-              <li>
-                <Link
-                  href="/login"
-                  onClick={close}
-                  className="flex items-center gap-2 py-3 text-base font-medium text-white hover:text-accent"
-                >
-                  <UserRound aria-hidden="true" className="h-5 w-5" />
-                  Sign in
-                </Link>
-              </li>
+              {accountName ? (
+                <>
+                  <li>
+                    <Link href="/account" onClick={close} className={accountLink}>
+                      <LayoutDashboard aria-hidden="true" className="h-5 w-5" />
+                      Account ({accountName})
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/account/garage" onClick={close} className={accountLink}>
+                      <Bike aria-hidden="true" className="h-5 w-5" />
+                      Garage
+                    </Link>
+                  </li>
+                  <li>
+                    <form action={signOutAction}>
+                      <button type="submit" className={`${accountLink} w-full`}>
+                        <LogOut aria-hidden="true" className="h-5 w-5" />
+                        Sign out
+                      </button>
+                    </form>
+                  </li>
+                </>
+              ) : (
+                <>
+                  <li>
+                    <Link href="/login" onClick={close} className={accountLink}>
+                      <UserRound aria-hidden="true" className="h-5 w-5" />
+                      Sign in
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/register" onClick={close} className={accountLink}>
+                      <UserRoundPlus aria-hidden="true" className="h-5 w-5" />
+                      Register
+                    </Link>
+                  </li>
+                </>
+              )}
             </ul>
           </nav>
         </div>

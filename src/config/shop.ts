@@ -6,7 +6,7 @@ export const SHOP_TAGLINE = 'Motorcycles, genuine parts and servicing';
 export const CURRENCY_LABEL = 'Rs.';
 export const PAGE_SIZE = 12;
 
-// Display text only: the catalogue views decide the real stock status.
+// Display text only: the database marks a variant low-stock at this quantity or fewer.
 export const LOW_STOCK_THRESHOLD = 5;
 
 export const DELIVERY_ESTIMATE = '2 to 3 working days';
@@ -20,3 +20,6 @@ export const FINDER_MIN_YEAR = 1990;
 
 // catalog_part_variants caps qty_available at this value (it means "this many or more").
 export const STOCK_QTY_CAP = 10;
+
+// Oldest model year accepted for a garage bike (keep in sync with src/lib/auth/validation.ts).
+export const BIKE_MIN_YEAR = 1950;
