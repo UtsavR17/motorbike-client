@@ -20,3 +20,6 @@ export const FINDER_MIN_YEAR = 1990;
 
 // catalog_part_variants caps qty_available at this value (it means "this many or more").
 export const STOCK_QTY_CAP = 10;
+
+// Oldest model year accepted for a garage bike (keep in sync with src/lib/auth/validation.ts).
+export const BIKE_MIN_YEAR = 1950;

@@ -27,6 +27,7 @@ export function readForm<K extends string>(formData: FormData, keys: readonly K[
 }
 
 const PASSWORD_MAX = 72;
+// Keep in sync with BIKE_MIN_YEAR in src/config/shop.ts (this file only imports zod).
 export const BIKE_MIN_YEAR = 1950;
 export const bikeMaxYear = () => new Date().getFullYear() + 1;
 

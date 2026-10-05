@@ -14,7 +14,6 @@ export function safeNext(value: unknown, fallback: string = DEFAULT_AFTER_LOGIN)
   if (!v.startsWith('/')) return fallback;
   if (v.startsWith('//')) return fallback;
   if (v.includes('\\')) return fallback;
-  // eslint-disable-next-line no-control-regex
   if (/[\u0000-\u001f\u007f]/.test(v)) return fallback;
   // A leading "/" already rules out "javascript:" or "https:" schemes; this catches
   // anything a URL parser would still treat as another origin.

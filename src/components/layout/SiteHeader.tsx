@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { Bike, ShoppingCart, UserRound } from 'lucide-react';
 import { SHOP_NAME } from '@/config/shop';
+import { displayName, getCurrentUser, getCustomerOrNull } from '@/lib/auth/session';
+import { AccountMenu } from './AccountMenu';
 import { HeaderSearch } from './HeaderSearch';
 import { MobileMenu } from './MobileMenu';
 import { NavLinks } from './NavLinks';
@@ -16,7 +18,22 @@ export function Logo() {
   );
 }
 
-export function SiteHeader() {
+/** First name (or email local part) of the signed-in user, or null for guests. */
+async function headerAccountName(): Promise<string | null> {
+  const user = await getCurrentUser();
+  if (!user) return null;
+  try {
+    return displayName(user, await getCustomerOrNull());
+  } catch {
+    // A profile lookup problem must not break every page; fall back to the email.
+    return displayName(user, null);
+  }
+}
+
+export async function SiteHeader() {
+  const accountName = await headerAccountName();
+  const linkClass =
+    'hidden h-10 items-center gap-2 rounded-control px-3 text-sm font-medium text-white/90 hover:bg-white/10 hover:text-white lg:inline-flex';
   return (
     <header className="sticky top-0 z-40 bg-ink text-white shadow-sm">
       <div className="container-page relative flex h-16 items-center gap-4">
@@ -27,13 +44,21 @@ export function SiteHeader() {
         </div>
 
         <div className="ml-auto flex items-center gap-1 lg:ml-0">
-          <Link
-            href="/login"
-            className="hidden h-10 items-center gap-2 rounded-control px-3 text-sm font-medium text-white/90 hover:bg-white/10 hover:text-white lg:inline-flex"
-          >
-            <UserRound aria-hidden="true" className="h-5 w-5" />
-            Sign in
-          </Link>
+          {accountName ? (
+            <div className="hidden lg:block">
+              <AccountMenu name={accountName} />
+            </div>
+          ) : (
+            <>
+              <Link href="/login" className={linkClass}>
+                <UserRound aria-hidden="true" className="h-5 w-5" />
+                Sign in
+              </Link>
+              <Link href="/register" className={linkClass}>
+                Register
+              </Link>
+            </>
+          )}
           <Link
             href="/cart"
             className="inline-flex h-10 w-10 items-center justify-center rounded-control text-white/90 hover:bg-white/10 hover:text-white"
@@ -41,7 +66,7 @@ export function SiteHeader() {
             <ShoppingCart aria-hidden="true" className="h-5 w-5" />
             <span className="sr-only">Cart</span>
           </Link>
-          <MobileMenu />
+          <MobileMenu accountName={accountName} />
         </div>
       </div>
 
