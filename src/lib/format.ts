@@ -1,4 +1,4 @@
-import { BIKE_DEPOSIT_PERCENT, CURRENCY_LABEL } from '@/config/shop';
+import { BIKE_DEPOSIT_PERCENT, CURRENCY_LABEL, ORDER_ID_PREFIX } from '@/config/shop';
 
 /** Converts a NUMERIC value (number or numeric string) to a finite number, else null. */
 export function toNumber(value: unknown): number | null {
@@ -60,4 +60,17 @@ export function depositFor(price: number): number {
 export function joinList(values: string[]): string {
   if (values.length <= 1) return values.join('');
   return `${values.slice(0, -1).join(', ')} and ${values[values.length - 1]}`;
+}
+
+/** "ORD-000123". The single place order ids are formatted for display. */
+export function formatOrderId(id: number): string {
+  return `${ORDER_ID_PREFIX}${String(Math.trunc(id)).padStart(6, '0')}`;
+}
+
+/** Calendar date like "8 Oct 2026" from an ISO date or timestamp; null when missing. */
+export function formatDate(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const d = new Date(value.length === 10 ? `${value}T00:00:00` : value);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
