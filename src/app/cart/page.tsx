@@ -1,19 +1,25 @@
 import type { Metadata } from 'next';
-import { ShoppingCart } from 'lucide-react';
-import { ComingSoon } from '@/components/ui/ComingSoon';
+import { CartView } from '@/components/cart/CartView';
+import { PageIntro } from '@/components/ui/PageIntro';
+import { getCurrentUser } from '@/lib/auth/session';
+import { parseId, type SearchParams } from '@/lib/params';
 
 export const metadata: Metadata = {
-  title: 'Cart',
-  description: 'Online ordering is coming soon.',
+  title: 'Your cart',
+  description: 'Review the parts in your cart before checkout.',
 };
 
-export default function CartPage() {
+export default async function CartPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const sp = await searchParams;
+  const user = await getCurrentUser();
+  const issue = sp.issue === 'stock' ? { stockId: parseId(sp.item) ?? null } : null;
+
   return (
-    <ComingSoon icon={ShoppingCart} title="Your cart is coming soon">
-      <p>
-        Online ordering with home delivery or store pickup arrives in the next update. For now, browse parts
-        and motorcycles to check prices and stock.
-      </p>
-    </ComingSoon>
+    <>
+      <PageIntro title="Your cart" crumbs={[{ href: '/', label: 'Home' }, { label: 'Cart' }]} />
+      <div className="container-page py-6 lg:py-8">
+        <CartView signedIn={Boolean(user)} issue={issue} />
+      </div>
+    </>
   );
 }

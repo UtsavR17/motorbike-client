@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { Bike, ShoppingCart, UserRound } from 'lucide-react';
+import { Bike, UserRound } from 'lucide-react';
+import { CartBadge } from '@/components/cart/CartBadge';
 import { SHOP_NAME } from '@/config/shop';
 import { displayName, getCurrentUser, getCustomerOrNull } from '@/lib/auth/session';
 import { AccountMenu } from './AccountMenu';
@@ -59,13 +60,7 @@ export async function SiteHeader() {
               </Link>
             </>
           )}
-          <Link
-            href="/cart"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-control text-white/90 hover:bg-white/10 hover:text-white"
-          >
-            <ShoppingCart aria-hidden="true" className="h-5 w-5" />
-            <span className="sr-only">Cart</span>
-          </Link>
+          <CartBadge />
           <MobileMenu accountName={accountName} />
         </div>
       </div>

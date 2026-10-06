@@ -1,6 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowRight, Bike, CalendarClock, Package, ShieldCheck, UserRound, UserRoundPlus } from 'lucide-react';
+import { OrderStatusBadge } from '@/components/orders/OrderStatusBadge';
+import { listMyOrders } from '@/lib/account/orders';
+import { formatDate, formatMoney, formatOrderId } from '@/lib/format';
 import { Notice } from '@/components/forms/FormMessage';
 import { noticeText } from '@/lib/account/notices';
 import { displayName, getCustomerOrNull, requireUser } from '@/lib/auth/session';
@@ -18,6 +21,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
   const user = await requireUser('/account');
   const customer = await getCustomerOrNull();
   const notice = noticeText((await searchParams).notice);
+  const recentOrders = customer ? await listMyOrders(3) : [];
 
   return (
     <div className="space-y-6">
@@ -95,16 +99,39 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         </ul>
       </section>
 
+      {customer && (
+        <section aria-labelledby="orders-heading" className="card p-5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 id="orders-heading" className="flex items-center gap-2 font-semibold">
+              <Package aria-hidden="true" className="h-5 w-5 text-accent-strong" />
+              Recent orders
+            </h2>
+            <Link href="/account/orders" className="link text-sm">View all orders</Link>
+          </div>
+          {recentOrders.length === 0 ? (
+            <p className="mt-3 text-sm text-ink-muted">
+              No orders yet. <Link href="/parts" className="link">Browse parts</Link>
+            </p>
+          ) : (
+            <ul className="mt-3 divide-y divide-line">
+              {recentOrders.map((o) => (
+                <li key={o.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
+                  <Link href={`/account/orders/${o.id}`} className="font-semibold hover:text-accent-strong hover:underline">
+                    {formatOrderId(o.id)}
+                  </Link>
+                  <span className="text-ink-muted">{formatDate(o.date)}</span>
+                  <span className="font-semibold">{formatMoney(o.total)}</span>
+                  <OrderStatusBadge status={o.status} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
       <section aria-labelledby="soon-heading">
         <h2 id="soon-heading" className="mb-3 text-lg font-semibold">Coming soon</h2>
         <ul className="grid gap-4 sm:grid-cols-2">
-          <li className="card flex gap-3 p-5">
-            <Package aria-hidden="true" className="h-6 w-6 shrink-0 text-ink-muted" />
-            <div>
-              <p className="font-semibold">Orders</p>
-              <p className="text-sm text-ink-muted">Order parts online and track them here.</p>
-            </div>
-          </li>
           <li className="card flex gap-3 p-5">
             <CalendarClock aria-hidden="true" className="h-6 w-6 shrink-0 text-ink-muted" />
             <div>
