@@ -106,8 +106,8 @@ in the browser, and no real money moves.
    stripe listen --events checkout.session.completed,checkout.session.async_payment_succeeded,checkout.session.async_payment_failed,checkout.session.expired --forward-to localhost:3000/api/stripe/webhook
    ```
    It prints a signing secret (`whsec_...`): put it in `STRIPE_WEBHOOK_SECRET` and restart
-   `npm run dev`. (`stripe listen --forward-to localhost:3000/api/stripe/webhook` without
-   `--events` also works; the app ignores other events.)
+   `npm run dev`. Recent Stripe CLI versions require `--events` (or `--all-snapshot`, which
+   forwards every event; the app answers 200 and ignores the ones it does not handle).
 4. **Currency.** `STRIPE_CURRENCY=mur` (Stripe accepts Mauritian rupees in test mode). Set
    `usd` only if MUR is rejected; amounts are then converted at `STRIPE_MUR_PER_USD`.
 
