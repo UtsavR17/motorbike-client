@@ -36,6 +36,8 @@ export default async function CheckoutSuccessPage({ searchParams }: { searchPara
 
   const pending = order.status === 'Pending Payment';
   const cancelled = order.status === 'Cancelled';
+  // A cancelled order was refunded only if Stripe actually took the payment.
+  const refunded = cancelled && session?.payment_status === 'paid';
 
   return (
     <div className="container-page flex justify-center py-10">
@@ -55,7 +57,13 @@ export default async function CheckoutSuccessPage({ searchParams }: { searchPara
             )}
           </span>
           <h1 className="text-2xl font-bold tracking-tight">
-            {cancelled ? 'Your payment is being refunded' : pending ? 'Confirming your payment' : 'Thank you, your order is confirmed'}
+            {refunded
+              ? 'Your payment is being refunded'
+              : cancelled
+                ? 'This order was cancelled'
+                : pending
+                  ? 'Confirming your payment'
+                  : 'Thank you, your order is confirmed'}
           </h1>
           <p className="mt-2 text-ink-muted">
             Order ID <strong className="text-ink">{formatOrderId(order.id)}</strong>
@@ -63,11 +71,14 @@ export default async function CheckoutSuccessPage({ searchParams }: { searchPara
           <div className="mt-2 flex justify-center"><OrderStatusBadge status={order.status} /></div>
           <div className="mt-4">
             {pending && <AwaitPaymentConfirmation />}
-            {cancelled && (
+            {refunded && (
               <p className="text-sm text-ink-muted">
                 One of the items sold out before your payment completed, so this order was cancelled and your payment
                 is being refunded in full. Your cart has not been changed.
               </p>
+            )}
+            {cancelled && !refunded && (
+              <p className="text-sm text-ink-muted">Nothing was charged and your cart has not been changed.</p>
             )}
             {!pending && !cancelled && (
               <>
