@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "node --import ./tests/register-ts.mjs --test tests/*.test.mjs",
-    "check:rls": "node --env-file-if-exists=.env.local scripts/customer-rls-check.mjs"
+    "check:rls": "node --env-file-if-exists=.env.local scripts/customer-rls-check.mjs",
+    "check:orders": "node --env-file-if-exists=.env.local scripts/orders-rls-check.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
