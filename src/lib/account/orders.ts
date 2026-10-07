@@ -1,10 +1,12 @@
 import 'server-only';
 
 import { toNumber } from '@/lib/format';
+import { orderTypeOf, type OrderType } from '@/lib/orders/status';
 import { createClient } from '@/lib/supabase/server';
 
 // Customers read orders only through the my_orders / my_order_items views (RLS-scoped to the
-// signed-in customer). Explicit column lists; no audit columns exist in these views.
+// signed-in customer). Explicit column lists; no audit columns exist in these views, and the
+// reservation columns describe the motorcycle without its VIN.
 
 export type OrderStatus =
   | 'Pending Payment'
@@ -25,8 +27,14 @@ export interface MyOrder {
   postCode: string | null;
   phone: string | null;
   estimatedDate: string | null;
+  /** For a reservation: the deposit. */
   total: number;
   paidAt: string | null;
+  orderType: OrderType;
+  /** Reservations only: visit-by date set when the deposit is paid. */
+  reservedUntil: string | null;
+  bikeDescription: string | null;
+  bikePrice: number | null;
 }
 
 export interface MyOrderItem {
@@ -37,7 +45,7 @@ export interface MyOrderItem {
 }
 
 const ORDER_COLUMNS =
-  'order_id,order_date,status,fulfilment,delivery_street,delivery_town,delivery_post_code,delivery_phone,estimated_date,total,paid_at';
+  'order_id,order_date,status,fulfilment,delivery_street,delivery_town,delivery_post_code,delivery_phone,estimated_date,total,paid_at,order_type,reserved_until,bike_description,bike_price';
 
 interface OrderRow {
   order_id: number;
@@ -51,6 +59,10 @@ interface OrderRow {
   estimated_date: string | null;
   total: number | string;
   paid_at: string | null;
+  order_type: string | null;
+  reserved_until: string | null;
+  bike_description: string | null;
+  bike_price: number | string | null;
 }
 
 function toOrder(r: OrderRow): MyOrder {
@@ -66,6 +78,10 @@ function toOrder(r: OrderRow): MyOrder {
     estimatedDate: r.estimated_date,
     total: toNumber(r.total) ?? 0,
     paidAt: r.paid_at,
+    orderType: orderTypeOf(r.order_type),
+    reservedUntil: r.reserved_until,
+    bikeDescription: r.bike_description,
+    bikePrice: toNumber(r.bike_price),
   };
 }
 

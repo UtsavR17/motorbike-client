@@ -1,4 +1,4 @@
-import { BIKE_DEPOSIT_PERCENT, CURRENCY_LABEL, ORDER_ID_PREFIX } from '@/config/shop';
+import { CURRENCY_LABEL, ORDER_ID_PREFIX } from '@/config/shop';
 
 /** Converts a NUMERIC value (number or numeric string) to a finite number, else null. */
 export function toNumber(value: unknown): number | null {
@@ -49,11 +49,6 @@ export function pluralize(count: number, singular: string, plural = `${singular}
 /** Collapses repeated whitespace that sometimes appears in admin-entered text. */
 export function cleanText(value: string | null | undefined): string {
   return (value ?? '').replace(/\s+/g, ' ').trim();
-}
-
-/** Deposit for reserving a motorcycle, rounded to cents. */
-export function depositFor(price: number): number {
-  return Math.round(price * BIKE_DEPOSIT_PERCENT) / 100;
 }
 
 /** Joins a list as "A, B and C". */

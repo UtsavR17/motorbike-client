@@ -12,8 +12,11 @@ export const LOW_STOCK_THRESHOLD = 5;
 export const DELIVERY_ESTIMATE = '2 to 3 working days';
 export const PICKUP_ESTIMATE = 'Ready the next working day';
 
-// Used for display text only (motorcycle reservations are a later task).
+// Motorcycle reservations. The database (create_bike_reservation) computes the deposit that is
+// charged; these values are for display and must match it.
 export const BIKE_DEPOSIT_PERCENT = 10;
+// A paid reservation holds the motorcycle for this many days (visit the dealership by then).
+export const RESERVATION_VALID_DAYS = 7;
 
 // The finder accepts model years from this year up to next year.
 export const FINDER_MIN_YEAR = 1990;

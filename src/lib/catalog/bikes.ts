@@ -154,3 +154,11 @@ export async function listBikesForModel(modelId: number): Promise<Bike[]> {
   if (error) fail('motorcycle units', error);
   return ((data ?? []) as BikeRow[]).map(toBike);
 }
+
+/** One unit for sale (by bike_id), or null when it is unknown, sold or reserved. No VIN. */
+export async function getBikeForSale(bikeId: number): Promise<Bike | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from('catalog_bikes').select(BIKE_COLUMNS).eq('bike_id', bikeId).maybeSingle();
+  if (error) fail('motorcycle unit', error);
+  return data ? toBike(data as BikeRow) : null;
+}

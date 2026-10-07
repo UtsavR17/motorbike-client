@@ -4,6 +4,7 @@ import { ArrowRight, Bike, CalendarClock, Package, ShieldCheck, UserRound, UserR
 import { OrderStatusBadge } from '@/components/orders/OrderStatusBadge';
 import { listMyOrders } from '@/lib/account/orders';
 import { formatDate, formatMoney, formatOrderId } from '@/lib/format';
+import { orderTypeLabel } from '@/lib/orders/status';
 import { Notice } from '@/components/forms/FormMessage';
 import { noticeText } from '@/lib/account/notices';
 import { displayName, getCustomerOrNull, requireUser } from '@/lib/auth/session';
@@ -116,12 +117,15 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
             <ul className="mt-3 divide-y divide-line">
               {recentOrders.map((o) => (
                 <li key={o.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
-                  <Link href={`/account/orders/${o.id}`} className="font-semibold hover:text-accent-strong hover:underline">
-                    {formatOrderId(o.id)}
-                  </Link>
+                  <span>
+                    <Link href={`/account/orders/${o.id}`} className="font-semibold hover:text-accent-strong hover:underline">
+                      {formatOrderId(o.id)}
+                    </Link>
+                    <span className="block text-xs text-ink-muted">{orderTypeLabel(o.orderType)}</span>
+                  </span>
                   <span className="text-ink-muted">{formatDate(o.date)}</span>
                   <span className="font-semibold">{formatMoney(o.total)}</span>
-                  <OrderStatusBadge status={o.status} />
+                  <OrderStatusBadge status={o.status} orderType={o.orderType} />
                 </li>
               ))}
             </ul>

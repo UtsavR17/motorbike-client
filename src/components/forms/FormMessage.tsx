@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { CheckCircle2, TriangleAlert } from 'lucide-react';
 import type { ReactNode, Ref } from 'react';
 import type { FormState } from '@/lib/forms';
@@ -17,7 +18,17 @@ export function FormMessage({ state, ref }: { state: FormState; ref?: Ref<HTMLDi
       }`}
     >
       <Icon aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
-      <span>{state.message}</span>
+      <span>
+        {state.message}
+        {state.link && (
+          <>
+            {' '}
+            <Link href={state.link.href} className="underline underline-offset-2">
+              {state.link.label}
+            </Link>
+          </>
+        )}
+      </span>
     </div>
   );
 }

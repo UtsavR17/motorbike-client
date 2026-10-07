@@ -81,3 +81,16 @@ export const orderIdSchema = z
 
 /** Stripe Checkout Session id from the success URL. */
 export const sessionIdSchema = z.string().regex(/^cs_(test|live)_[A-Za-z0-9]{10,200}$/);
+
+/** Motorcycle unit id (catalog_bikes.bike_id) from a URL or form value. */
+export const bikeIdSchema = z
+  .string()
+  .regex(/^\d{1,10}$/)
+  .transform(Number)
+  .refine((n) => n > 0 && n <= 2_147_483_647);
+
+/** Starting a reservation: only the bike id and the confirmation tick come from the browser. */
+export const reservationSchema = z.object({
+  bikeId: bikeIdSchema,
+  terms: z.literal('yes', 'Tick the box to confirm you understand how the deposit works'),
+});

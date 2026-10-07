@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { currencyConfig, expectedTotalMinor } from '@/lib/commerce/money';
+import { currencyConfig, expectedChargeMinor } from '@/lib/commerce/money';
 import { toNumber } from '@/lib/format';
 import { getStripe } from '@/lib/stripe/server';
 import { handleStripeWebhook, type FinalizeResult, type WebhookDeps } from '@/lib/stripe/webhook-router';
@@ -21,15 +21,26 @@ function deps(): WebhookDeps {
     constructEvent: (raw, signature) => stripe.webhooks.constructEvent(raw, signature, secret),
 
     async expectedAmountMinor(orderId) {
+      // Parts orders: sum of their items. Reservations: no items, the deposit is TotalAmount.
+      const order = await admin
+        .from('Online_Order')
+        .select('OrderType,TotalAmount')
+        .eq('OrderID', orderId)
+        .maybeSingle();
+      if (order.error) throw new Error(`order read failed: ${order.error.code ?? 'unknown'}`);
       const { data, error } = await admin
         .from('Online_Order_Item')
         .select('Quantity,UnitPrice')
         .eq('Online_Order_OrderID', orderId);
       if (error) throw new Error(`order items read failed: ${error.code ?? 'unknown'}`);
-      const rows = (data ?? []) as { Quantity: number; UnitPrice: number | string }[];
-      if (rows.length === 0) return null;
-      return expectedTotalMinor(
-        rows.map((r) => ({ unitPrice: toNumber(r.UnitPrice) ?? NaN, quantity: r.Quantity })),
+      const row = order.data as { OrderType: string | null; TotalAmount: number | string | null } | null;
+      const items = ((data ?? []) as { Quantity: number; UnitPrice: number | string }[]).map((r) => ({
+        unitPrice: toNumber(r.UnitPrice) ?? NaN,
+        quantity: r.Quantity,
+      }));
+      return expectedChargeMinor(
+        row ? { orderType: row.OrderType, totalAmount: toNumber(row.TotalAmount) } : null,
+        items,
         config,
       );
     },

@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { CheckCircle2, Clock, XCircle } from 'lucide-react';
 import { AwaitPaymentConfirmation, ClearCartOnce } from '@/components/checkout/PaymentWatchers';
 import { FulfilmentDetails, OrderItemsTable } from '@/components/orders/OrderSummary';
+import { CollectFromDealership, ReservationDetails } from '@/components/orders/ReservationSummary';
 import { OrderStatusBadge } from '@/components/orders/OrderStatusBadge';
 import { getMyOrder, getMyOrderItems } from '@/lib/account/orders';
 import { requireCustomer } from '@/lib/auth/session';
@@ -32,7 +33,8 @@ export default async function CheckoutSuccessPage({ searchParams }: { searchPara
   // my_orders is scoped to the signed-in customer, so another customer's order is "not found".
   const order = await getMyOrder(orderId);
   if (!order) notFound();
-  const items = await getMyOrderItems(order.id);
+  const reservation = order.orderType === 'Reservation';
+  const items = reservation ? [] : await getMyOrderItems(order.id);
 
   const pending = order.status === 'Pending Payment';
   const cancelled = order.status === 'Cancelled';
@@ -58,17 +60,44 @@ export default async function CheckoutSuccessPage({ searchParams }: { searchPara
           </span>
           <h1 className="text-2xl font-bold tracking-tight">
             {refunded
-              ? 'Your payment is being refunded'
+              ? reservation
+                ? 'Your deposit is being refunded'
+                : 'Your payment is being refunded'
               : cancelled
-                ? 'This order was cancelled'
+                ? reservation
+                  ? 'This reservation was cancelled'
+                  : 'This order was cancelled'
                 : pending
-                  ? 'Confirming your payment'
-                  : 'Thank you, your order is confirmed'}
+                  ? reservation
+                    ? 'Confirming your deposit'
+                    : 'Confirming your payment'
+                  : reservation
+                    ? 'Motorcycle reserved'
+                    : 'Thank you, your order is confirmed'}
           </h1>
           <p className="mt-2 text-ink-muted">
             Order ID <strong className="text-ink">{formatOrderId(order.id)}</strong>
           </p>
-          <div className="mt-2 flex justify-center"><OrderStatusBadge status={order.status} /></div>
+          <div className="mt-2 flex justify-center"><OrderStatusBadge status={order.status} orderType={order.orderType} /></div>
+          {reservation ? (
+          <div className="mt-4">
+            {/* A reservation never touches the cart. */}
+            {pending && <AwaitPaymentConfirmation what="reservation" />}
+            {refunded && (
+              <p className="text-sm text-ink-muted">
+                Another customer reserved this motorcycle before your payment completed, so this reservation was
+                cancelled and your deposit is being refunded in full.
+              </p>
+            )}
+            {cancelled && !refunded && <p className="text-sm text-ink-muted">Nothing was charged.</p>}
+            {!pending && !cancelled && (
+              <p className="text-sm text-ink-muted">
+                We have received your deposit and the motorcycle is held for you. Visit the dealership to pay the
+                balance and collect it.
+              </p>
+            )}
+          </div>
+          ) : (
           <div className="mt-4">
             {pending && <AwaitPaymentConfirmation />}
             {refunded && (
@@ -87,20 +116,33 @@ export default async function CheckoutSuccessPage({ searchParams }: { searchPara
               </>
             )}
           </div>
+          )}
         </div>
 
-        {!cancelled && (
-          <>
-            <OrderItemsTable items={items} total={order.total} />
-            <FulfilmentDetails order={order} />
-          </>
-        )}
+        {!cancelled &&
+          (reservation ? (
+            <>
+              <ReservationDetails order={order} />
+              <CollectFromDealership />
+            </>
+          ) : (
+            <>
+              <OrderItemsTable items={items} total={order.total} />
+              <FulfilmentDetails order={order} />
+            </>
+          ))}
 
         <div className="flex flex-wrap justify-center gap-3">
-          <Link href={`/account/orders/${order.id}`} className="btn-dark h-11">View order</Link>
-          <Link href={cancelled ? '/cart' : '/parts'} className="btn-outline h-11">
-            {cancelled ? 'Back to cart' : 'Continue shopping'}
+          <Link href={`/account/orders/${order.id}`} className="btn-dark h-11">
+            {reservation ? 'View reservation' : 'View order'}
           </Link>
+          {reservation ? (
+            <Link href="/bikes" className="btn-outline h-11">Browse motorcycles</Link>
+          ) : (
+            <Link href={cancelled ? '/cart' : '/parts'} className="btn-outline h-11">
+              {cancelled ? 'Back to cart' : 'Continue shopping'}
+            </Link>
+          )}
         </div>
       </div>
     </div>

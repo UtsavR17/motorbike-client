@@ -1,6 +1,7 @@
 // Online orders RLS check: signs in as a TEST customer with the public key only and prints
-// PASS/FAIL for each rule the checkout relies on. It creates one Pickup order for a single
-// in-stock item and cancels it again (a Cancelled order is left behind, which is expected).
+// PASS/FAIL for each rule the checkout and motorcycle reservations rely on. It creates one
+// Pickup order for a single in-stock item and one reservation for an available motorcycle, and
+// cancels both again (two Cancelled orders are left behind, which is expected).
 //
 //   TEST_EMAIL=... TEST_PASSWORD=... npm run check:orders
 // The test user must be a confirmed customer with a completed profile. No secret keys are used.
@@ -129,10 +130,99 @@ async function main() {
     }
   }
 
+  await checkReservations();
+
   await supabase.auth.signOut();
   const failed = results.filter((r) => !r).length;
   console.log(`\n${results.length - failed} passed or skipped, ${failed} failed.`);
   process.exit(failed ? 1 : 0);
+}
+
+/** 10% deposit rounded to cents, halves away from zero (as create_bike_reservation does). */
+function expectedDeposit(price) {
+  const cents = Math.round(Number(price) * 100);
+  return Math.floor((cents * 10 + 50) / 100) / 100;
+}
+
+async function checkReservations() {
+  console.log('');
+  /* 7. Reservations */
+  let r = await supabase.rpc('create_bike_reservation', { p_bike_id: 2147483000 });
+  report(
+    '7a Unknown motorcycle rejected',
+    Boolean(r.error) && /BIKE_NOT_FOUND|BIKE_UNAVAILABLE/.test(`${r.error.message}`),
+    why(r.error),
+  );
+  if (!r.error && r.data) await supabase.rpc('cancel_my_pending_order', { p_order_id: r.data.order_id });
+
+  const bikes = await supabase.from('catalog_bikes').select('bike_id,price').order('price', { ascending: true }).limit(20);
+  if (bikes.error || !bikes.data?.length) {
+    report('7b Reservation for an available motorcycle', null, bikes.error ? why(bikes.error) : 'no available motorcycle in catalog_bikes');
+  } else {
+    // A unit can be on hold while another customer pays: try the next one.
+    let bike = null;
+    let created = null;
+    for (const b of bikes.data) {
+      r = await supabase.rpc('create_bike_reservation', { p_bike_id: b.bike_id });
+      if (r.error && `${r.error.message}`.includes('BIKE_ON_HOLD')) continue;
+      bike = b;
+      created = r;
+      break;
+    }
+    if (!bike) {
+      report('7b Reservation for an available motorcycle', null, 'every available motorcycle is on hold right now');
+    } else {
+      const res = typeof created.data === 'string' ? JSON.parse(created.data) : created.data;
+      report('7b Reservation created for an available motorcycle', !created.error && Boolean(res?.order_id), why(created.error));
+      if (res?.order_id) {
+        const mine = await supabase
+          .from('my_orders')
+          .select('order_id,status,fulfilment,total,order_type,reserved_until,bike_description,bike_price')
+          .eq('order_id', res.order_id)
+          .maybeSingle();
+        report(
+          '7c Appears in my_orders as a Pending Payment Reservation (Pickup)',
+          mine.data?.status === 'Pending Payment' && mine.data?.order_type === 'Reservation' && mine.data?.fulfilment === 'Pickup',
+          mine.error ? why(mine.error) : `${mine.data?.order_type} ${mine.data?.status} ${mine.data?.fulfilment}`,
+        );
+        const deposit = expectedDeposit(bike.price);
+        report(
+          '7d Deposit is 10% of the database price',
+          Math.abs(Number(mine.data?.total) - deposit) < 0.005 && Math.abs(Number(res.deposit) - deposit) < 0.005,
+          `total ${mine.data?.total}, rpc ${res.deposit}, expected ${deposit}`,
+        );
+        report(
+          '7e bike_price equals the catalog price',
+          Math.abs(Number(mine.data?.bike_price) - Number(bike.price)) < 0.005,
+          `bike_price ${mine.data?.bike_price}, catalog ${bike.price}`,
+        );
+        const items = await supabase.from('my_order_items').select('stock_id').eq('order_id', res.order_id);
+        report('7f A reservation has no items', !items.error && items.data.length === 0, why(items.error));
+
+        const upd = await supabase.from('Online_Order').update({ TotalAmount: 1 }).eq('OrderID', res.order_id).select('OrderID');
+        report('7g Direct UPDATE of the deposit fails', denied(upd), why(upd.error));
+
+        const cancel = await supabase.rpc('cancel_my_pending_order', { p_order_id: res.order_id });
+        report('7h cancel_my_pending_order cancels the reservation', cancel.data === true, why(cancel.error));
+        const after = await supabase.from('my_orders').select('status').eq('order_id', res.order_id).maybeSingle();
+        report('7i Reservation is now Cancelled', after.data?.status === 'Cancelled', why(after.error));
+
+        const staff = await supabase.rpc('cancel_bike_reservation', { p_order_id: res.order_id });
+        if (staff.error?.code === 'PGRST202') {
+          report('7j cancel_bike_reservation is denied', null, 'parameter names differ from p_order_id; check manually');
+        } else {
+          report('7j cancel_bike_reservation is denied', Boolean(staff.error), why(staff.error));
+        }
+      }
+    }
+  }
+
+  const vin = await supabase.from('my_orders').select('vin').limit(1);
+  report('7k my_orders has no VIN column', Boolean(vin.error), why(vin.error));
+  for (const table of ['Sale', 'New_MotorBike']) {
+    const t = await supabase.from(table).select().limit(1);
+    report(`7l Cannot read ${table} directly`, denied(t), why(t.error));
+  }
 }
 
 main().catch((err) => {

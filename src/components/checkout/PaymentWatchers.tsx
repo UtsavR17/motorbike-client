@@ -28,7 +28,16 @@ export function ClearCartOnce({ orderId }: { orderId: number }) {
  * While the webhook confirms the payment, re-renders the server page every 2 seconds for
  * about 30 seconds, then shows a reassuring message instead.
  */
-export function AwaitPaymentConfirmation({ intervalMs = 2000, attempts = 15 }: { intervalMs?: number; attempts?: number }) {
+export function AwaitPaymentConfirmation({
+  intervalMs = 2000,
+  attempts = 15,
+  what = 'order',
+}: {
+  intervalMs?: number;
+  attempts?: number;
+  /** What is being finalised, for the message ("order" or "reservation"). */
+  what?: 'order' | 'reservation';
+}) {
   const router = useRouter();
   const [tries, setTries] = useState(0);
   const done = tries >= attempts;
@@ -45,7 +54,7 @@ export function AwaitPaymentConfirmation({ intervalMs = 2000, attempts = 15 }: {
   return (
     <p role="status" aria-live="polite" className="text-sm text-ink-muted">
       {done
-        ? 'We have received your payment and are finalising your order. It will appear in My orders shortly.'
+        ? `We have received your payment and are finalising your ${what}. It will appear in My orders shortly.`
         : 'Confirming your payment with the bank. This usually takes a few seconds...'}
     </p>
   );

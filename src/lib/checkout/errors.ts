@@ -21,10 +21,15 @@ const TOKENS = [
   'INSUFFICIENT_STOCK',
 ] as const;
 
-export function orderErrorToken(message: string | null | undefined): (typeof TOKENS)[number] | null {
+/** First of `tokens` that appears as a whole word in the error message. */
+function findToken<T extends string>(tokens: readonly T[], message: string | null | undefined): T | null {
   const m = message ?? '';
-  for (const t of TOKENS) if (new RegExp(`(^|[^A-Z_])${t}($|[^A-Z_])`).test(m)) return t;
+  for (const t of tokens) if (new RegExp(`(^|[^A-Z_])${t}($|[^A-Z_])`).test(m)) return t;
   return null;
+}
+
+export function orderErrorToken(message: string | null | undefined): (typeof TOKENS)[number] | null {
+  return findToken(TOKENS, message);
 }
 
 /** First positive integer in the error details (the offending stock id). */
@@ -59,13 +64,34 @@ export function mapCreateOrderError(e: ErrorLike): CreateOrderOutcome {
   return { kind: 'error', message: 'We could not start your order right now. Please try again.' };
 }
 
-/** Status labels customers see (database value -> label). */
-export const ORDER_STATUS_LABELS: Record<string, string> = {
-  'Pending Payment': 'Awaiting payment',
-  Paid: 'Paid',
-  Processing: 'Processing',
-  'Ready for Pickup': 'Ready for pickup',
-  'Out for Delivery': 'Out for delivery',
-  Completed: 'Completed',
-  Cancelled: 'Cancelled',
-};
+/* ------------------------------ Reservations ------------------------------ */
+
+export type ReservationOutcome =
+  | { kind: 'unavailable'; message: string }
+  | { kind: 'on_hold'; message: string }
+  | { kind: 'no_profile' }
+  | { kind: 'error'; message: string };
+
+const RESERVATION_TOKENS = ['NO_PROFILE', 'BIKE_NOT_FOUND', 'BIKE_UNAVAILABLE', 'BIKE_ON_HOLD', 'INVALID_PRICE'] as const;
+
+export const RESERVATION_MESSAGES = {
+  unavailable: 'This motorcycle has just been reserved or sold.',
+  onHold: 'Another customer is completing a reservation for this motorcycle. Please try again in about 30 minutes.',
+  generic: 'We could not start your reservation right now. Please try again.',
+} as const;
+
+/** Maps create_bike_reservation errors to what the customer should see. */
+export function mapReservationError(e: ErrorLike): ReservationOutcome {
+  switch (findToken(RESERVATION_TOKENS, e.message)) {
+    case 'BIKE_NOT_FOUND':
+    case 'BIKE_UNAVAILABLE':
+      return { kind: 'unavailable', message: RESERVATION_MESSAGES.unavailable };
+    case 'BIKE_ON_HOLD':
+      return { kind: 'on_hold', message: RESERVATION_MESSAGES.onHold };
+    case 'NO_PROFILE':
+      return { kind: 'no_profile' };
+    default:
+      // INVALID_PRICE and anything unexpected.
+      return { kind: 'error', message: RESERVATION_MESSAGES.generic };
+  }
+}

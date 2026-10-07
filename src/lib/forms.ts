@@ -9,13 +9,15 @@ export interface FormState {
   values?: Record<string, string>;
   /** Changes on every submission so the form can re-focus the first error. */
   submittedAt?: number;
+  /** Optional link shown with the message (for example back to the catalogue). */
+  link?: { href: string; label: string };
 }
 
 export const initialFormState: FormState = { status: 'idle' };
 
 export function errorState(
   values: Record<string, string> | undefined,
-  mapped: { message?: string; fieldErrors?: FieldErrors },
+  mapped: { message?: string; fieldErrors?: FieldErrors; link?: FormState['link'] },
 ): FormState {
   const hasFields = mapped.fieldErrors && Object.keys(mapped.fieldErrors).length > 0;
   return {
@@ -24,6 +26,7 @@ export function errorState(
     fieldErrors: mapped.fieldErrors,
     values,
     submittedAt: Date.now(),
+    ...(mapped.link ? { link: mapped.link } : {}),
   };
 }
 

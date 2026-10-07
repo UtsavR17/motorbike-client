@@ -23,7 +23,10 @@ export interface EventLike {
 export interface WebhookDeps {
   /** Verifies the signature over the raw body; throws when it is invalid. */
   constructEvent(rawBody: string, signature: string): EventLike;
-  /** Expected charge in minor units, recomputed from the order's items; null if the order has no items. */
+  /**
+   * Expected charge in minor units: a parts order's items summed, or a reservation's deposit
+   * (TotalAmount). Null when the order is missing or inconsistent.
+   */
   expectedAmountMinor(orderId: number): Promise<number | null>;
   finalize(orderId: number, sessionId: string, paymentIntentId: string): Promise<FinalizeResult>;
   expire(orderId: number, sessionId: string): Promise<unknown>;
@@ -99,7 +102,7 @@ async function finalizePaid(event: EventLike, session: SessionLike, deps: Webhoo
 
   if (result === 'refund_required') {
     await deps.refund(paymentIntent, orderId);
-    deps.log('info', 'Item sold out before payment completed: order cancelled and payment refunded', base);
+    deps.log('info', 'Item or motorcycle no longer available when payment completed: order cancelled and payment refunded', base);
     return { status: 200, outcome: 'refunded' };
   }
   deps.log('info', result === 'paid' ? 'Order paid' : 'Order already paid (duplicate event)', base);
