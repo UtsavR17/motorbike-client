@@ -43,7 +43,7 @@ export async function updateSession(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
   let target: URL | null = null;
-  if (!signedIn && (matches(pathname, '/account') || matches(pathname, '/checkout'))) {
+  if (!signedIn && ['/account', '/checkout', '/reserve'].some((p) => matches(pathname, p))) {
     target = new URL('/login', request.url);
     target.searchParams.set('next', `${pathname}${search}`);
   } else if (signedIn && GUEST_ONLY.some((p) => matches(pathname, p))) {

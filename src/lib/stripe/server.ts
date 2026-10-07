@@ -29,14 +29,21 @@ export interface OrderLine {
   qty: number;
 }
 
-/** Hosted Checkout Session for an order created by create_online_order. */
+/**
+ * Hosted Checkout Session for an order created by create_online_order (parts) or
+ * create_bike_reservation (one deposit line; orderType 'reservation' is added to the metadata).
+ */
 export async function createCheckoutSession(input: {
   orderId: number;
   lines: OrderLine[];
   email: string | null;
+  orderType?: 'reservation';
 }): Promise<Stripe.Checkout.Session> {
   const config = currencyConfig();
   const orderId = String(input.orderId);
+  const metadata: Record<string, string> = input.orderType
+    ? { order_id: orderId, order_type: input.orderType }
+    : { order_id: orderId };
   return getStripe().checkout.sessions.create({
     mode: 'payment',
     line_items: input.lines.map((l) => ({
@@ -44,12 +51,12 @@ export async function createCheckoutSession(input: {
       price_data: {
         currency: config.currency,
         unit_amount: toMinorUnits(l.unitPrice, config),
-        product_data: { name: l.name.slice(0, 250) || 'Spare part' },
+        product_data: { name: l.name.slice(0, 250) || (input.orderType ? 'Motorcycle deposit' : 'Spare part') },
       },
     })),
     client_reference_id: orderId,
-    metadata: { order_id: orderId },
-    payment_intent_data: { metadata: { order_id: orderId } },
+    metadata,
+    payment_intent_data: { metadata },
     ...(input.email ? { customer_email: input.email } : {}),
     success_url: `${SITE_URL}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${SITE_URL}/checkout/cancelled?order=${orderId}`,
