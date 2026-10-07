@@ -1,5 +1,5 @@
-import { CheckCircle2, Clock, Cog, PackageCheck, Store, Truck, XCircle } from 'lucide-react';
-import { ORDER_STATUS_LABELS } from '@/lib/checkout/errors';
+import { CalendarCheck, CheckCircle2, Clock, Cog, PackageCheck, Store, Truck, XCircle } from 'lucide-react';
+import { orderStatusLabel, type OrderType } from '@/lib/orders/status';
 
 const STYLES: Record<string, { className: string; Icon: typeof Clock }> = {
   'Pending Payment': { className: 'bg-warn-soft text-warn', Icon: Clock },
@@ -12,15 +12,15 @@ const STYLES: Record<string, { className: string; Icon: typeof Clock }> = {
 };
 
 /** The single order status badge used across checkout and account pages. */
-export function OrderStatusBadge({ status }: { status: string }) {
+export function OrderStatusBadge({ status, orderType = 'Parts' }: { status: string; orderType?: OrderType }) {
   const style = STYLES[status] ?? { className: 'bg-page text-ink', Icon: Clock };
-  const { Icon } = style;
+  const Icon = orderType === 'Reservation' && status === 'Paid' ? CalendarCheck : style.Icon;
   return (
     <span
       className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold ${style.className}`}
     >
       <Icon aria-hidden="true" className="h-3.5 w-3.5" />
-      {ORDER_STATUS_LABELS[status] ?? status}
+      {orderStatusLabel(orderType, status)}
     </span>
   );
 }

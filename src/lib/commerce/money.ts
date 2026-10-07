@@ -19,7 +19,7 @@ export function currencyConfig(env: Record<string, string | undefined> = process
 }
 
 /** Rounds to an integer, halves away from zero (2.5 -> 3, -2.5 -> -3). */
-function roundHalfAwayFromZero(value: number): number {
+export function roundHalfAwayFromZero(value: number): number {
   // The tiny nudge absorbs binary floating point noise such as 0.285 * 100 = 28.499999...
   return Math.sign(value) * Math.round(Math.abs(value) + 1e-9);
 }
@@ -40,4 +40,31 @@ export function expectedTotalMinor(
   config: CurrencyConfig = currencyConfig(),
 ): number {
   return lines.reduce((sum, l) => sum + toMinorUnits(l.unitPrice, config) * l.quantity, 0);
+}
+
+export interface ChargeOrder {
+  /** Online_Order.OrderType: "Parts" or "Reservation". */
+  orderType: string | null;
+  /** Online_Order.TotalAmount in MUR (for a reservation: the deposit). */
+  totalAmount: number | null;
+}
+
+/**
+ * Amount the Stripe session must have charged, in minor units, or null when the order cannot be
+ * checked (missing, inconsistent). Parts orders: recomputed from their items, as Stripe sums the
+ * line items. Reservations have no items: the session has one line equal to TotalAmount.
+ */
+export function expectedChargeMinor(
+  order: ChargeOrder | null,
+  items: { unitPrice: number; quantity: number }[],
+  config: CurrencyConfig = currencyConfig(),
+): number | null {
+  if (!order) return null;
+  if (order.orderType === 'Reservation') {
+    if (items.length > 0) return null;
+    if (order.totalAmount === null || !Number.isFinite(order.totalAmount) || order.totalAmount <= 0) return null;
+    return toMinorUnits(order.totalAmount, config);
+  }
+  if (items.length === 0) return null;
+  return expectedTotalMinor(items, config);
 }

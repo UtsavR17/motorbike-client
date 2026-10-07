@@ -8,8 +8,8 @@ import { ProductImage } from '@/components/ui/ProductImage';
 import { BIKE_DEPOSIT_PERCENT } from '@/config/shop';
 import { getBikeModel, listBikesForModel } from '@/lib/catalog/bikes';
 import { getModel } from '@/lib/catalog/lookups';
+import { depositFor } from '@/lib/commerce/reservation';
 import {
-  depositFor,
   formatMoney,
   formatPriceRange,
   formatRange,
@@ -55,15 +55,16 @@ function depositText(price: number): string {
   return `Reserve online with a deposit of ${formatMoney(depositFor(price))} (${BIKE_DEPOSIT_PERCENT}%). Pay the balance at the dealership.`;
 }
 
+/** Links to the reservation page; /reserve sends guests to sign in and returns them here. */
 function ReserveButton({ unit, describedBy }: { unit: Bike; describedBy: string }) {
   return (
     <div>
-      <button type="button" disabled className="btn-primary w-full" aria-describedby={describedBy}>
+      <Link href={`/reserve/${unit.bike_id}`} className="btn-primary w-full" aria-describedby={describedBy}>
         <CalendarClock aria-hidden="true" className="h-4 w-4" />
         Reserve with deposit
-      </button>
+      </Link>
       <p id={describedBy} className="mt-1.5 text-xs text-ink-muted">
-        {depositText(unit.price)} Online reservations open soon.
+        {depositText(unit.price)}
       </p>
     </div>
   );
@@ -180,7 +181,7 @@ export default async function BikeDetailPage({ params }: BikePageProps) {
                 </thead>
                 <tbody className="divide-y divide-line">
                   {units.map((u, i) => (
-                    <tr key={i} className="align-top">
+                    <tr key={u.bike_id} className="align-top">
                       <td className="px-4 py-4 font-medium">{u.color ?? 'Not listed'}</td>
                       <td className="px-4 py-4">{u.year ?? 'Not listed'}</td>
                       <td className="px-4 py-4">{u.engine_cc ? `${u.engine_cc} cc` : 'Not listed'}</td>
@@ -201,7 +202,7 @@ export default async function BikeDetailPage({ params }: BikePageProps) {
             {/* Small screens: one card per unit */}
             <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:hidden">
               {units.map((u, i) => (
-                <li key={i} className="card p-4">
+                <li key={u.bike_id} className="card p-4">
                   <div className="flex items-start justify-between gap-3">
                     <p className="font-semibold">
                       {u.color ?? 'Colour not listed'}
