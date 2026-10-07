@@ -105,7 +105,7 @@ export default async function OrdersPage() {
                     {reservation ? 'Awaiting deposit.' : 'Awaiting payment.'} If you left the payment page, this{' '}
                     {reservation ? 'reservation' : 'order'} will be cancelled automatically.
                   </span>
-                  <CancelOrderButton orderId={o.id} />
+                  <CancelOrderButton orderId={o.id} label={reservation ? 'Cancel reservation' : undefined} />
                 </div>
               )}
               <Link href={`/account/orders/${o.id}`} className="link mt-3 inline-block text-sm">

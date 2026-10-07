@@ -84,7 +84,7 @@ export default async function OrderDetailPage({
               ? 'This reservation is awaiting the deposit payment. It is cancelled automatically if the payment is not completed.'
               : 'This order is awaiting payment. It is cancelled automatically if the payment is not completed.'}
           </span>
-          <CancelOrderButton orderId={order.id} />
+          <CancelOrderButton orderId={order.id} label={reservation ? 'Cancel reservation' : undefined} />
         </div>
       )}
 
@@ -127,7 +127,7 @@ export default async function OrderDetailPage({
       {reservation ? (
         <>
           <ReservationDetails order={order} />
-          <CollectFromDealership />
+          {order.status !== 'Cancelled' && <CollectFromDealership />}
         </>
       ) : (
         <>

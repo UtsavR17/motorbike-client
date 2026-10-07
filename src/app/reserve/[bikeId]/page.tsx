@@ -124,15 +124,15 @@ export default async function ReservePage({ params }: { params: Promise<{ bikeId
           <dl className="space-y-2 text-sm">
             <div className="flex justify-between gap-3">
               <dt className="text-ink-muted">Motorcycle price</dt>
-              <dd className="font-semibold">{formatMoney(bike.price)}</dd>
+              <dd className="shrink-0 whitespace-nowrap font-semibold">{formatMoney(bike.price)}</dd>
             </div>
             <div className="flex justify-between gap-3 border-t border-line pt-2 text-base">
               <dt className="font-semibold">Deposit to pay now ({BIKE_DEPOSIT_PERCENT}%)</dt>
-              <dd className="font-bold">{formatMoney(deposit)}</dd>
+              <dd className="shrink-0 whitespace-nowrap font-bold">{formatMoney(deposit)}</dd>
             </div>
             <div className="flex justify-between gap-3">
               <dt className="text-ink-muted">Balance at the dealership</dt>
-              <dd className="font-semibold">{formatMoney(balance)}</dd>
+              <dd className="shrink-0 whitespace-nowrap font-semibold">{formatMoney(balance)}</dd>
             </div>
           </dl>
           <p className="flex gap-2 rounded-control bg-page px-3 py-2.5 text-sm">
