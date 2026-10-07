@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Bike, LayoutDashboard, LogOut, Menu, UserRound, UserRoundPlus, X } from 'lucide-react';
+import { Bike, LayoutDashboard, LogOut, Menu, Package, UserRound, UserRoundPlus, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { signOutAction } from '@/lib/actions/auth';
 import { HeaderSearch } from './HeaderSearch';
@@ -77,6 +77,12 @@ export function MobileMenu({ accountName }: { accountName: string | null }) {
                     <Link href="/account" onClick={close} className={accountLink}>
                       <LayoutDashboard aria-hidden="true" className="h-5 w-5" />
                       Account ({accountName})
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/account/orders" onClick={close} className={accountLink}>
+                      <Package aria-hidden="true" className="h-5 w-5" />
+                      Orders
                     </Link>
                   </li>
                   <li>

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Bike, ChevronDown, LayoutDashboard, LogOut, UserRound } from 'lucide-react';
+import { Bike, ChevronDown, LayoutDashboard, LogOut, Package, UserRound } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { signOutAction } from '@/lib/actions/auth';
 
@@ -67,6 +67,12 @@ export function AccountMenu({ name }: { name: string }) {
             <Link href="/account" className={itemClass}>
               <LayoutDashboard aria-hidden="true" className="h-4 w-4" />
               Account
+            </Link>
+          </li>
+          <li>
+            <Link href="/account/orders" className={itemClass}>
+              <Package aria-hidden="true" className="h-4 w-4" />
+              Orders
             </Link>
           </li>
           <li>

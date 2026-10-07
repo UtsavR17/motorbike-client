@@ -1,13 +1,15 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Check, ShieldCheck, ShoppingCart, Store, Truck } from 'lucide-react';
+import { Check, ShieldCheck, Store, Truck } from 'lucide-react';
+import { AddToCart } from '@/components/cart/AddToCart';
 import { Breadcrumbs } from '@/components/ui/PageIntro';
 import { ProductImage } from '@/components/ui/ProductImage';
 import { StockBadge } from '@/components/ui/StockBadge';
 import {
   DELIVERY_ESTIMATE,
   LOW_STOCK_THRESHOLD,
+  MAX_LINE_QTY,
   PICKUP_ESTIMATE,
   STOCK_QTY_CAP,
 } from '@/config/shop';
@@ -214,15 +216,13 @@ export default async function PartDetailPage({ params, searchParams }: PartPageP
             </div>
           </dl>
 
-          <div>
-            <button type="button" disabled className="btn-primary w-full sm:w-auto" aria-describedby="cart-note">
-              <ShoppingCart aria-hidden="true" className="h-4 w-4" />
-              Add to cart
-            </button>
-            <p id="cart-note" className="mt-2 text-sm text-ink-muted">
-              Cart and checkout arrive soon.
-            </p>
-          </div>
+          <AddToCart
+            key={selected.stock_id}
+            stockId={selected.stock_id}
+            name={selected.part_name}
+            price={selected.price}
+            maxQty={isAvailable(selected) ? Math.min(selected.qty_available, MAX_LINE_QTY) : 0}
+          />
 
           <section aria-labelledby="delivery-heading" className="card p-4">
             <h2 id="delivery-heading" className="text-base font-semibold">

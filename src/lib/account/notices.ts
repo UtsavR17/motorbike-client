@@ -9,6 +9,8 @@ const NOTICES = {
   'bike-added': 'Your bike has been added to your garage.',
   'bike-updated': 'Your bike has been updated.',
   'bike-deleted': 'Your bike has been removed from your garage.',
+  'order-cancelled': 'The order has been cancelled. Nothing was charged.',
+  'order-not-cancelled': 'This order can no longer be cancelled here. If you paid, please contact the dealership.',
 } as const;
 
 export function noticeText(value: string | string[] | undefined): string | null {

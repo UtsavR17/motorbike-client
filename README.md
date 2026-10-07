@@ -10,7 +10,11 @@ but only through public, read-only catalogue views.
   password, optional Google), password reset, a customer profile (which can claim an
   existing walk-in customer record by NIC and email) and a garage for the customer's bikes.
 
-Cart, checkout and appointments are not built yet (`/cart` is a "coming soon" page).
+- Phase 3: cart, checkout and orders for spare parts. Customers choose home delivery or
+  store pickup and pay on a hosted Stripe Checkout page (test mode only); a webhook
+  confirms the payment and the order appears in My orders.
+
+Motorcycle reservations and workshop appointments are not built yet.
 
 ## Stack
 
@@ -33,7 +37,8 @@ Other scripts:
 |---|---|
 | `npm run lint`, `npx tsc --noEmit`, `npm run build`, `npm start` | Quality checks, production build and server |
 | `npm test` | Unit tests for validation, error mapping and the open-redirect guard (Node test runner) |
-| `npm run check:rls` | Signs in as a test customer and checks the database rules (see below) |
+| `npm run check:rls` | Signs in as a test customer and checks the customer/garage database rules |
+| `npm run check:orders` | Signs in as a test customer and checks the online order rules (creates and cancels one test order) |
 
 ## Environment variables
 
@@ -43,10 +48,16 @@ Other scripts:
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Public (publishable/anon) key. |
 | `NEXT_PUBLIC_SITE_URL` | Absolute site origin for auth redirect links. Default `http://localhost:3000`. |
 | `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED` | `true` shows "Continue with Google". Default `false` (button hidden). |
-| `TEST_EMAIL`, `TEST_PASSWORD`, `OTHER_CUSTOMER_ID` | Only for `npm run check:rls`. Never commit real values. |
+| `TEST_EMAIL`, `TEST_PASSWORD`, `OTHER_CUSTOMER_ID` | Only for `npm run check:rls` / `check:orders`. Never commit real values. |
+| `STRIPE_SECRET_KEY` | Server only. Stripe **test** secret key (`sk_test_...`). Live keys are refused. |
+| `STRIPE_WEBHOOK_SECRET` | Server only. Signing secret printed by `stripe listen` (`whsec_...`). |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server only. Used exclusively by the Stripe webhook route to confirm payments. |
+| `STRIPE_CURRENCY` | `mur` (default) or `usd`. The shop always shows Rs. and stores MUR. |
+| `STRIPE_MUR_PER_USD` | Only with `usd`: rupees per dollar for the conversion (default 46, a demo value). |
 
-Only the public key is used. Never put the service-role (secret) key in this project.
-`.env.local` is git-ignored; only `.env.example` is committed.
+The browser only ever sees the public key. The three server-only secrets above live in
+`.env.local` (git-ignored; only `.env.example` is committed), are read only in
+`server-only` modules, and are never logged or rendered.
 
 ## Auth setup (Supabase dashboard)
 
@@ -78,6 +89,48 @@ TEST_EMAIL=you+test@example.com TEST_PASSWORD='...' npm run check:rls
 
 The script also reads `.env.local` (put `TEST_EMAIL` and `TEST_PASSWORD` there if you prefer).
 
+## Payments setup (Stripe test mode)
+
+Payments use hosted Stripe Checkout in **test mode**: no Stripe.js or publishable key runs
+in the browser, and no real money moves.
+
+1. **Keys.** In the Stripe Dashboard (test mode) open Developers > API keys and copy the
+   secret key (`sk_test_...`) into `STRIPE_SECRET_KEY`. Copy the Supabase service-role key
+   (Project Settings > API) into `SUPABASE_SERVICE_ROLE_KEY`.
+2. **Stripe CLI.** Install it, then sign in once:
+   ```bash
+   stripe login
+   ```
+3. **Forward webhooks** to the app while `npm run dev` runs (keep this terminal open):
+   ```bash
+   stripe listen --events checkout.session.completed,checkout.session.async_payment_succeeded,checkout.session.async_payment_failed,checkout.session.expired --forward-to localhost:3000/api/stripe/webhook
+   ```
+   It prints a signing secret (`whsec_...`): put it in `STRIPE_WEBHOOK_SECRET` and restart
+   `npm run dev`. Recent Stripe CLI versions require `--events` (or `--all-snapshot`, which
+   forwards every event; the app answers 200 and ignores the ones it does not handle).
+4. **Currency.** `STRIPE_CURRENCY=mur` (Stripe accepts Mauritian rupees in test mode). Set
+   `usd` only if MUR is rejected; amounts are then converted at `STRIPE_MUR_PER_USD`.
+
+**Test cards** (any future expiry date, any CVC, any postcode):
+
+| Card | Result |
+|---|---|
+| `4242 4242 4242 4242` | Payment succeeds |
+| `4000 0000 0000 0002` | Card declined |
+| `4000 0025 0000 3155` | Asks for 3D Secure authentication |
+
+**How an order flows.** `/checkout` calls `create_online_order` (prices and total come from
+the database) and opens a Checkout Session that expires after 30 minutes. Only the webhook
+(`/api/stripe/webhook`, signature-verified) marks the order Paid, decrements stock and records
+the payment via `finalize_online_order`. If the last unit sold in the meantime, the order is
+cancelled and the payment refunded automatically. Abandoned or expired sessions cancel the
+pending order. Useful CLI commands while testing:
+
+```bash
+stripe checkout sessions expire cs_test_...
+stripe events resend evt_...
+```
+
 ## Database contract
 
 The app may query only these objects (all readable by `anon` and `authenticated`):
@@ -93,6 +146,11 @@ Signed-in customers (role `authenticated`, under RLS):
 - `Customer_bike`: full access to their own bikes; only `RegistrationNumber` and `Year` can change.
 - RPC `register_customer(...)`: creates the profile or claims a matching walk-in record. The
   email comes from the verified login, never from the form.
+- Online orders: views `my_orders` and `my_order_items`; functions `create_online_order`,
+  `attach_checkout_session` and `cancel_my_pending_order`. The order tables themselves are not
+  readable by customers.
+- Webhook only (service-role key): `finalize_online_order` and `expire_online_order`, plus a
+  read of `Online_Order_Item` to re-check the charged amount.
 
 Base tables (`Stock`, `New_MotorBike`, `Supplier_Product`, `Customer`, ...) are not
 readable with the public key. Database changes are applied by the project owner, never
@@ -106,24 +164,31 @@ src/
   app/                        routes: /, /parts, /parts/[partId], /bikes, /bikes/[modelId],
                               /services, /cart, plus loading, error and not-found UI
     login, register, verify, forgot-password, reset-password, auth/callback
-    account/                  overview, profile (+ complete), security, garage (new, edit)
+    account/                  overview, orders (+ detail), profile (+ complete), security, garage
+    cart, checkout (+ success, cancelled), api/stripe/webhook
   components/
     layout/                   header, mobile menu, search box, footer
     catalog/                  cards, vehicle finder, filters, sort links, trust strip
     ui/                       image with placeholder, badges, pagination, empty states, skeletons
     forms/                    field, message, submit button, focus-on-error hook
     account/                  auth, profile and garage forms, account navigation
+    cart/, checkout/, orders/ cart provider and view, checkout form, order badges and summaries
   config/shop.ts              shop constants (currency, page size, delivery text, deposit %)
   lib/
     supabase/                 browser, server and proxy clients (publishable key only)
     catalog/                  server-only data access for the views and RPC
     auth/                     config, session helpers, zod schemas, error mapping, safeNext()
-    actions/                  Server Actions: auth, profile, garage
-    account/                  garage data and notices
+    actions/                  Server Actions: auth, profile, garage, cart lookup, checkout
+    account/                  garage and order data, notices
+    cart/, checkout/          cart storage format, checkout validation and error mapping
+    commerce/money.ts         MUR to Stripe minor units (toMinorUnits)
+    stripe/                   server-only Stripe client (test keys only) and the webhook router
+    supabase/admin.ts         service-role client: imported ONLY by the webhook route
     params.ts                 validated URL parameter parsing and canonical URLs
     format.ts, labels.ts      money, ranges and display helpers
   types/catalog.ts            hand-written types matching the views
 scripts/customer-rls-check.mjs  live RLS check (npm run check:rls)
+scripts/orders-rls-check.mjs    live online-order check (npm run check:orders)
 tests/                          unit tests (npm test)
 ```
 
