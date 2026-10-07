@@ -14,7 +14,11 @@ but only through public, read-only catalogue views.
   store pickup and pay on a hosted Stripe Checkout page (test mode only); a webhook
   confirms the payment and the order appears in My orders.
 
-Motorcycle reservations and workshop appointments are not built yet.
+- Phase 4: motorcycle reservations. A customer pays a 10% deposit online (hosted Stripe
+  Checkout) to hold a specific unit for 7 days, then pays the balance and collects it at the
+  dealership. The full price is never charged online.
+
+Workshop appointments are not built yet.
 
 ## Stack
 
@@ -38,7 +42,7 @@ Other scripts:
 | `npm run lint`, `npx tsc --noEmit`, `npm run build`, `npm start` | Quality checks, production build and server |
 | `npm test` | Unit tests for validation, error mapping and the open-redirect guard (Node test runner) |
 | `npm run check:rls` | Signs in as a test customer and checks the customer/garage database rules |
-| `npm run check:orders` | Signs in as a test customer and checks the online order rules (creates and cancels one test order) |
+| `npm run check:orders` | Signs in as a test customer and checks the online order and reservation rules (creates and cancels one test order and one test reservation) |
 
 ## Environment variables
 
@@ -131,6 +135,17 @@ stripe checkout sessions expire cs_test_...
 stripe events resend evt_...
 ```
 
+**How a reservation flows.** "Reserve with deposit" on a motorcycle page opens
+`/reserve/<bikeId>` (sign-in and a completed profile required). After the customer ticks the
+confirmation box, `create_bike_reservation` creates a Pending Payment order of type
+`Reservation` with no items; the database sets the deposit (10% of the unit's price), and the
+browser never sends a price. The Checkout Session has one line, "Deposit (10%): ...", with
+`order_type=reservation` in its metadata. The webhook checks the charged amount against the
+order's `TotalAmount` (parts orders are still checked against their items). It then calls
+`finalize_online_order`, which marks the unit Sold, creates the Sale and the Deposit payment
+and sets the visit-by date (payment date + 7 days). If another customer reserved the unit
+first, the deposit is refunded automatically. Cancellations are handled by the dealership.
+
 ## Database contract
 
 The app may query only these objects (all readable by `anon` and `authenticated`):
@@ -149,8 +164,12 @@ Signed-in customers (role `authenticated`, under RLS):
 - Online orders: views `my_orders` and `my_order_items`; functions `create_online_order`,
   `attach_checkout_session` and `cancel_my_pending_order`. The order tables themselves are not
   readable by customers.
+- Reservations: `create_bike_reservation(p_bike_id)`, plus the same `attach_checkout_session`
+  and `cancel_my_pending_order`. `my_orders` adds `order_type`, `reserved_until`,
+  `bike_description` and `bike_price` (never the VIN).
 - Webhook only (service-role key): `finalize_online_order` and `expire_online_order`, plus a
-  read of `Online_Order_Item` to re-check the charged amount.
+  read of `Online_Order` (`OrderType`, `TotalAmount`) and `Online_Order_Item` to re-check
+  the charged amount.
 
 Base tables (`Stock`, `New_MotorBike`, `Supplier_Product`, `Customer`, ...) are not
 readable with the public key. Database changes are applied by the project owner, never
