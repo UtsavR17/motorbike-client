@@ -10,7 +10,8 @@
     "test": "node --import ./tests/register-ts.mjs --test tests/*.test.mjs",
     "check:rls": "node --env-file-if-exists=.env.local scripts/customer-rls-check.mjs",
     "check:orders": "node --env-file-if-exists=.env.local scripts/orders-rls-check.mjs",
-    "check:appointments": "node --env-file-if-exists=.env.local scripts/appointments-rls-check.mjs"
+    "check:appointments": "node --env-file-if-exists=.env.local scripts/appointments-rls-check.mjs",
+    "check:supplier-application": "node --env-file-if-exists=.env.local scripts/supplier-application-check.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

@@ -22,6 +22,10 @@ but only through public, read-only catalogue views.
   08:30 to 16:30) for a garage bike with 1 to 5 services, follows its status in My
   appointments and can cancel up to 2 hours before. The dealership confirms bookings and
   assigns a technician in the Admin Panel. Payment is made at the dealership.
+- Phase 6: "Become a supplier". A signed-in user with a verified email applies with company
+  details and a BRN document (PDF, JPG or PNG up to 5 MB, stored in a private bucket). The
+  dealership reviews it in the Admin Panel; on approval the same email and password sign in
+  to the Supplier Portal (`NEXT_PUBLIC_SUPPLIER_PORTAL_URL`).
 
 ## Stack
 
@@ -45,6 +49,7 @@ Other scripts:
 | `npm run lint`, `npx tsc --noEmit`, `npm run build`, `npm start` | Quality checks, production build and server |
 | `npm test` | Unit tests for validation, error mapping and the open-redirect guard (Node test runner) |
 | `npm run check:rls` | Signs in as a test customer and checks the customer/garage database rules |
+| `npm run check:supplier-application` | Signs in as a test user and checks the supplier application rules (creates no application unless `ALLOW_CREATE_APPLICATION=1`) |
 | `npm run check:appointments` | Signs in as a test customer and checks the appointment rules (books and cancels one test appointment; needs a garage bike) |
 | `npm run check:orders` | Signs in as a test customer and checks the online order and reservation rules (creates and cancels one test order and one test reservation) |
 
@@ -56,6 +61,7 @@ Other scripts:
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Public (publishable/anon) key. |
 | `NEXT_PUBLIC_SITE_URL` | Absolute site origin for auth redirect links. Default `http://localhost:3000`. |
 | `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED` | `true` shows "Continue with Google". Default `false` (button hidden). |
+| `NEXT_PUBLIC_SUPPLIER_PORTAL_URL` | Supplier Portal login page (the Flask app), linked after an application is approved. Development default `http://localhost:5000/supplier-portal/login`; set it to the real Flask URL when deployed. |
 | `TEST_EMAIL`, `TEST_PASSWORD`, `OTHER_CUSTOMER_ID` | Only for `npm run check:rls` / `check:orders`. Never commit real values. |
 | `STRIPE_SECRET_KEY` | Server only. Stripe **test** secret key (`sk_test_...`). Live keys are refused. |
 | `STRIPE_WEBHOOK_SECRET` | Server only. Signing secret printed by `stripe listen` (`whsec_...`). |
@@ -175,6 +181,10 @@ Signed-in customers (role `authenticated`, under RLS):
   (no employee or audit columns); functions `get_appointment_slots(p_from, p_to)` (counts
   only), `create_my_appointment(...)` and `cancel_my_appointment(p_appointment_id)`. The
   `Appointment`, `appointment_service` and `Appointment_Stock` tables are never queried.
+- Supplier applications: view `my_supplier_applications` and function
+  `submit_supplier_application(...)` (the email comes from the login). Documents go to the
+  private Storage bucket `supplier-applications` at `<userId>/<random-uuid>.<ext>`, uploaded
+  with the user's session. `Supplier_Application` and `Supplier` are never queried.
 - Webhook only (service-role key): `finalize_online_order` and `expire_online_order`, plus a
   read of `Online_Order` (`OrderType`, `TotalAmount`) and `Online_Order_Item` to re-check
   the charged amount.
@@ -217,6 +227,7 @@ src/
 scripts/customer-rls-check.mjs  live RLS check (npm run check:rls)
 scripts/orders-rls-check.mjs    live online-order check (npm run check:orders)
 scripts/appointments-rls-check.mjs  live appointment check (npm run check:appointments)
+scripts/supplier-application-check.mjs  live supplier application check (npm run check:supplier-application)
 tests/                          unit tests (npm test)
 ```
 
