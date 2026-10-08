@@ -56,3 +56,12 @@ export const APPOINTMENT_MAX_SERVICES = 5;
 // Dealership contact shown on appointment pages. Leave SHOP_PHONE empty to hide the number.
 export const SHOP_PHONE: string = '';
 export const WORKSHOP_HOURS_TEXT = `${APPOINTMENT_OPEN_DAYS_TEXT}, ${APPOINTMENT_HOURS_TEXT}`;
+
+/* ---------------------------- Supplier applications ---------------------------- */
+// Display and pre-checks only: submit_supplier_application and the storage bucket enforce these.
+
+export const SUPPLIER_APPLICATION_MAX_FILE_MB = 5;
+export const SUPPLIER_APPLICATION_MAX_ATTEMPTS = 3;
+// Supplier Portal login (the Flask app). Set NEXT_PUBLIC_SUPPLIER_PORTAL_URL to the real URL.
+export const SUPPLIER_PORTAL_URL =
+  process.env.NEXT_PUBLIC_SUPPLIER_PORTAL_URL || 'http://localhost:5000/supplier-portal/login';

@@ -6,6 +6,12 @@ const supabaseHost = supabaseUrl ? new URL(supabaseUrl).hostname : null;
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  experimental: {
+    serverActions: {
+      // Supplier applications upload one BRN document of up to 5 MB plus the form fields.
+      bodySizeLimit: '6mb',
+    },
+  },
   images: {
     remotePatterns: supabaseHost
       ? [
