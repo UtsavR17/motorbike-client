@@ -69,7 +69,6 @@ export default async function SupplierApplicationPage({ searchParams }: { search
           <div className="flex flex-wrap items-center gap-3">
             <Clock aria-hidden="true" className="h-6 w-6 text-warn" />
             <h2 id="pending-heading" className="text-lg font-semibold">Under review</h2>
-            <StatusBadge status="Pending" />
           </div>
           <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
             <Detail label="Company" value={view.application.company} />
