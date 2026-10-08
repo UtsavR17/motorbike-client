@@ -17,7 +17,7 @@ export function useFormFeedback(state: FormState) {
     if (state.status === 'error' && Object.keys(errors).length > 0 && formRef.current) {
       const first = Array.from(formRef.current.elements).find(
         (el): el is HTMLInputElement | HTMLSelectElement =>
-          (el instanceof HTMLInputElement || el instanceof HTMLSelectElement) && Boolean(errors[el.name]),
+          (el instanceof HTMLInputElement || el instanceof HTMLSelectElement) && !el.disabled && Boolean(errors[el.name]),
       );
       if (first) {
         first.focus();

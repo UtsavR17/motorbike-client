@@ -3,7 +3,6 @@
 import { CalendarCheck, Info, RefreshCw } from 'lucide-react';
 import { useActionState, useRef, useState, useTransition } from 'react';
 import { FormMessage } from '@/components/forms/FormMessage';
-import { SubmitButton } from '@/components/forms/SubmitButton';
 import { useFormFeedback } from '@/components/forms/useFormFeedback';
 import { APPOINTMENT_MAX_SERVICES, APPOINTMENT_TYPES } from '@/config/shop';
 import { bookAppointmentAction, getSlotsAction, type SlotsResult } from '@/lib/actions/appointments';
@@ -50,6 +49,7 @@ export function BookingForm({ bikes, services, initialBikeId, initialServiceIds,
   const [time, setTime] = useState('');
   const [slots, setSlots] = useState<SlotsResult | null>(null);
   const [loadingSlots, startSlots] = useTransition();
+  const [, startSubmit] = useTransition();
   const latestDate = useRef('');
 
   async function refreshSlots(d: string): Promise<SlotsResult> {
@@ -63,7 +63,7 @@ export function BookingForm({ bikes, services, initialBikeId, initialServiceIds,
     return result;
   }
 
-  const [state, action] = useActionState(async (prev: FormState, formData: FormData) => {
+  const [state, action, submitting] = useActionState(async (prev: FormState, formData: FormData) => {
     const result = await bookAppointmentAction(prev, formData);
     const d = formData.get('date');
     // After an error the slots may have changed (for example a slot was just taken).
@@ -78,7 +78,8 @@ export function BookingForm({ bikes, services, initialBikeId, initialServiceIds,
     if (nextBike) p.set('bike', nextBike);
     nextServices.forEach((id) => p.append('service', String(id)));
     const query = p.toString();
-    window.history.replaceState(null, '', query ? `/book?${query}` : '/book');
+    const path = window.location.pathname;
+    window.history.replaceState(null, '', query ? `${path}?${query}` : path);
   }
 
   function chooseBike(id: string) {
@@ -110,7 +111,16 @@ export function BookingForm({ bikes, services, initialBikeId, initialServiceIds,
   const atMax = serviceIds.length >= APPOINTMENT_MAX_SERVICES;
 
   return (
-    <form ref={formRef} action={action} noValidate className="grid gap-6 lg:grid-cols-[1fr_360px] lg:items-start">
+    <form
+      ref={formRef}
+      // onSubmit (not action=) so React does not reset the form: selections stay after an error.
+      onSubmit={(ev) => {
+        ev.preventDefault();
+        const formData = new FormData(ev.currentTarget);
+        startSubmit(() => action(formData));
+      }}
+      noValidate
+      className="grid gap-6 lg:grid-cols-[1fr_360px] lg:items-start">
       <div className="space-y-6">
         <FormMessage state={state} ref={messageRef} />
 
@@ -238,6 +248,7 @@ export function BookingForm({ bikes, services, initialBikeId, initialServiceIds,
                 id="appointment-date"
                 type="date"
                 name="date"
+                autoComplete="off"
                 min={minDate}
                 max={maxDate}
                 value={date}
@@ -361,10 +372,16 @@ export function BookingForm({ bikes, services, initialBikeId, initialServiceIds,
           <span className="font-semibold">Estimated cost</span>
           <span className="font-bold">{formatMoney(estimate)}</span>
         </div>
-        <SubmitButton pendingLabel="Booking..." className="w-full">
-          <CalendarCheck aria-hidden="true" className="h-4 w-4" />
-          Confirm booking
-        </SubmitButton>
+        <button type="submit" disabled={submitting} aria-disabled={submitting} className="btn-primary h-11 w-full">
+          {submitting ? (
+            'Booking...'
+          ) : (
+            <>
+              <CalendarCheck aria-hidden="true" className="h-4 w-4" />
+              Confirm booking
+            </>
+          )}
+        </button>
         <p className="flex gap-2 text-xs text-ink-muted">
           <Info aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-accent-strong" />
           <span>Your booking is confirmed by the dealership. You will see the status here.</span>
