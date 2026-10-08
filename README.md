@@ -18,7 +18,10 @@ but only through public, read-only catalogue views.
   Checkout) to hold a specific unit for 7 days, then pays the balance and collects it at the
   dealership. The full price is never charged online.
 
-Workshop appointments are not built yet.
+- Phase 5: workshop appointments. A customer books a one-hour slot (Monday to Saturday,
+  08:30 to 16:30) for a garage bike with 1 to 5 services, follows its status in My
+  appointments and can cancel up to 2 hours before. The dealership confirms bookings and
+  assigns a technician in the Admin Panel. Payment is made at the dealership.
 
 ## Stack
 
@@ -42,6 +45,7 @@ Other scripts:
 | `npm run lint`, `npx tsc --noEmit`, `npm run build`, `npm start` | Quality checks, production build and server |
 | `npm test` | Unit tests for validation, error mapping and the open-redirect guard (Node test runner) |
 | `npm run check:rls` | Signs in as a test customer and checks the customer/garage database rules |
+| `npm run check:appointments` | Signs in as a test customer and checks the appointment rules (books and cancels one test appointment; needs a garage bike) |
 | `npm run check:orders` | Signs in as a test customer and checks the online order and reservation rules (creates and cancels one test order and one test reservation) |
 
 ## Environment variables
@@ -167,6 +171,10 @@ Signed-in customers (role `authenticated`, under RLS):
 - Reservations: `create_bike_reservation(p_bike_id)`, plus the same `attach_checkout_session`
   and `cancel_my_pending_order`. `my_orders` adds `order_type`, `reserved_until`,
   `bike_description` and `bike_price` (never the VIN).
+- Appointments: views `my_appointments`, `my_appointment_services` and `my_appointment_parts`
+  (no employee or audit columns); functions `get_appointment_slots(p_from, p_to)` (counts
+  only), `create_my_appointment(...)` and `cancel_my_appointment(p_appointment_id)`. The
+  `Appointment`, `appointment_service` and `Appointment_Stock` tables are never queried.
 - Webhook only (service-role key): `finalize_online_order` and `expire_online_order`, plus a
   read of `Online_Order` (`OrderType`, `TotalAmount`) and `Online_Order_Item` to re-check
   the charged amount.
@@ -208,6 +216,7 @@ src/
   types/catalog.ts            hand-written types matching the views
 scripts/customer-rls-check.mjs  live RLS check (npm run check:rls)
 scripts/orders-rls-check.mjs    live online-order check (npm run check:orders)
+scripts/appointments-rls-check.mjs  live appointment check (npm run check:appointments)
 tests/                          unit tests (npm test)
 ```
 

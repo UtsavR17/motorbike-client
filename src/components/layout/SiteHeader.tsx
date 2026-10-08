@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Bike, UserRound } from 'lucide-react';
+import { Bike, CalendarCheck, UserRound } from 'lucide-react';
 import { CartBadge } from '@/components/cart/CartBadge';
 import { SHOP_NAME } from '@/config/shop';
 import { displayName, getCurrentUser, getCustomerOrNull } from '@/lib/auth/session';
@@ -45,6 +45,13 @@ export async function SiteHeader() {
         </div>
 
         <div className="ml-auto flex items-center gap-1 lg:ml-0">
+          <Link
+            href="/book"
+            className="hidden h-10 items-center gap-2 rounded-control bg-accent px-3 text-sm font-semibold text-ink hover:bg-accent-strong hover:text-white sm:inline-flex"
+          >
+            <CalendarCheck aria-hidden="true" className="h-4 w-4" />
+            Book a service
+          </Link>
           {accountName ? (
             <div className="hidden lg:block">
               <AccountMenu name={accountName} />

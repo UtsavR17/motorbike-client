@@ -11,6 +11,9 @@ const NOTICES = {
   'bike-deleted': 'Your bike has been removed from your garage.',
   'order-cancelled': 'The order has been cancelled. Nothing was charged.',
   'order-not-cancelled': 'This order can no longer be cancelled here. If you paid, please contact the dealership.',
+  'appointment-cancelled': 'Appointment cancelled.',
+  'appointment-not-cancelled':
+    'This appointment can no longer be cancelled online. Please contact the dealership.',
 } as const;
 
 export function noticeText(value: string | string[] | undefined): string | null {
