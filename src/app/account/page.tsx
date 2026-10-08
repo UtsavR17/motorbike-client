@@ -1,8 +1,11 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowRight, Bike, CalendarClock, Package, ShieldCheck, UserRound, UserRoundPlus } from 'lucide-react';
+import { AppointmentStatusBadge } from '@/components/appointments/AppointmentStatusBadge';
 import { OrderStatusBadge } from '@/components/orders/OrderStatusBadge';
+import { listMyAppointments } from '@/lib/account/appointments';
 import { listMyOrders } from '@/lib/account/orders';
+import { appointmentStart, isUpcoming, slotLabel } from '@/lib/appointments/time';
 import { formatDate, formatMoney, formatOrderId } from '@/lib/format';
 import { orderTypeLabel } from '@/lib/orders/status';
 import { Notice } from '@/components/forms/FormMessage';
@@ -23,6 +26,12 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
   const customer = await getCustomerOrNull();
   const notice = noticeText((await searchParams).notice);
   const recentOrders = customer ? await listMyOrders(3) : [];
+  const now = new Date();
+  const nextAppointment = customer
+    ? (await listMyAppointments())
+        .filter((a) => isUpcoming(a.date, a.time, a.status, now))
+        .sort((a, b) => appointmentStart(a.date, a.time).getTime() - appointmentStart(b.date, b.time).getTime())[0]
+    : undefined;
 
   return (
     <div className="space-y-6">
@@ -133,18 +142,39 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         </section>
       )}
 
-      <section aria-labelledby="soon-heading">
-        <h2 id="soon-heading" className="mb-3 text-lg font-semibold">Coming soon</h2>
-        <ul className="grid gap-4 sm:grid-cols-2">
-          <li className="card flex gap-3 p-5">
-            <CalendarClock aria-hidden="true" className="h-6 w-6 shrink-0 text-ink-muted" />
-            <div>
-              <p className="font-semibold">Appointments</p>
-              <p className="text-sm text-ink-muted">Book a service for one of your bikes.</p>
+      {customer && (
+        <section aria-labelledby="appointments-heading" className="card p-5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 id="appointments-heading" className="flex items-center gap-2 font-semibold">
+              <CalendarClock aria-hidden="true" className="h-5 w-5 text-accent-strong" />
+              Next appointment
+            </h2>
+            <Link href="/account/appointments" className="link text-sm">View all appointments</Link>
+          </div>
+          {nextAppointment ? (
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm">
+              <div>
+                <Link
+                  href={`/account/appointments/${nextAppointment.id}`}
+                  className="font-semibold hover:text-accent-strong hover:underline"
+                >
+                  {formatDate(nextAppointment.date)}, {slotLabel(nextAppointment.time)}
+                </Link>
+                <p className="text-ink-muted">
+                  {nextAppointment.type} for {nextAppointment.bikeLabel ?? 'your motorcycle'}
+                  {nextAppointment.registration ? ` (${nextAppointment.registration})` : ''}
+                </p>
+              </div>
+              <AppointmentStatusBadge status={nextAppointment.status} />
             </div>
-          </li>
-        </ul>
-      </section>
+          ) : (
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm">
+              <p className="text-ink-muted">No upcoming appointments. Book a service for one of your bikes.</p>
+              <Link href="/book" className="btn-primary h-10">Book a service</Link>
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 }

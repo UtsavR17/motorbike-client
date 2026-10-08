@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { CalendarCheck, Wrench } from 'lucide-react';
 import { ServiceCard } from '@/components/catalog/ServiceCard';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -19,7 +20,14 @@ export default async function ServicesPage() {
         title="Workshop services"
         description="Servicing and repairs by our own mechanics, with clear prices for each service."
         crumbs={[{ href: '/', label: 'Home' }, { label: 'Services' }]}
-      />
+      >
+        {services.length > 0 && (
+          <Link href="/book" className="btn-primary mt-4 h-11">
+            <CalendarCheck aria-hidden="true" className="h-4 w-4" />
+            Book an appointment
+          </Link>
+        )}
+      </PageIntro>
       <div className="container-page py-6 lg:py-8">
         {services.length === 0 ? (
           <EmptyState icon={Wrench} title="Services will be listed soon">
@@ -27,22 +35,14 @@ export default async function ServicesPage() {
           </EmptyState>
         ) : (
           <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {services.map((service, i) => (
+            {services.map((service) => (
               <li key={service.service_id}>
                 <ServiceCard service={service}>
                   <div className="mt-4">
-                    <button
-                      type="button"
-                      disabled
-                      className="btn-primary w-full"
-                      aria-describedby={`booking-note-${i}`}
-                    >
+                    <Link href={`/book?service=${service.service_id}`} className="btn-primary w-full">
                       <CalendarCheck aria-hidden="true" className="h-4 w-4" />
-                      Book appointment
-                    </button>
-                    <p id={`booking-note-${i}`} className="mt-1.5 text-xs text-ink-muted">
-                      Online booking arrives soon.
-                    </p>
+                      Book appointment<span className="sr-only"> for {service.name}</span>
+                    </Link>
                   </div>
                 </ServiceCard>
               </li>

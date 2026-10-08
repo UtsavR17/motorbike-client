@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Bike, Pencil, Plus, Search } from 'lucide-react';
+import { Bike, CalendarCheck, Pencil, Plus, Search } from 'lucide-react';
 import { DeleteBikeButton } from '@/components/account/GarageForms';
 import { Notice } from '@/components/forms/FormMessage';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -81,6 +81,10 @@ export default async function GaragePage({ searchParams }: { searchParams: Promi
                   <Link href={shopHref(bike.modelId, bike.year)} className="btn-dark h-10">
                     <Search aria-hidden="true" className="h-4 w-4" />
                     Shop parts for this bike
+                  </Link>
+                  <Link href={`/book?bike=${bike.id}`} className="btn-primary h-10">
+                    <CalendarCheck aria-hidden="true" className="h-4 w-4" />
+                    Book a service<span className="sr-only"> for {name}</span>
                   </Link>
                   <Link href={`/account/garage/${bike.id}/edit`} className="btn-outline h-10">
                     <Pencil aria-hidden="true" className="h-4 w-4" />

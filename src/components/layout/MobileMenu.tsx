@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Bike, LayoutDashboard, LogOut, Menu, Package, UserRound, UserRoundPlus, X } from 'lucide-react';
+import { Bike, CalendarCheck, CalendarClock, LayoutDashboard, LogOut, Menu, Package, UserRound, UserRoundPlus, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { signOutAction } from '@/lib/actions/auth';
 import { HeaderSearch } from './HeaderSearch';
@@ -52,6 +52,10 @@ export function MobileMenu({ accountName }: { accountName: string | null }) {
       >
         <div className="container-page pt-4">
           <HeaderSearch id="mobile-search" onNavigate={close} />
+          <Link href="/book" onClick={close} className="btn-primary mt-3 h-11 w-full">
+            <CalendarCheck aria-hidden="true" className="h-4 w-4" />
+            Book a service
+          </Link>
           <nav aria-label="Mobile" className="mt-3">
             <ul className="divide-y divide-white/10">
               {NAV_LINKS.map((link) => {
@@ -83,6 +87,12 @@ export function MobileMenu({ accountName }: { accountName: string | null }) {
                     <Link href="/account/orders" onClick={close} className={accountLink}>
                       <Package aria-hidden="true" className="h-5 w-5" />
                       Orders
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/account/appointments" onClick={close} className={accountLink}>
+                      <CalendarClock aria-hidden="true" className="h-5 w-5" />
+                      Appointments
                     </Link>
                   </li>
                   <li>
