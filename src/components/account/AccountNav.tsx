@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Bike, CalendarClock, LayoutDashboard, LogOut, Package, ShieldCheck, UserRound } from 'lucide-react';
+import { Bike, Building2, CalendarClock, LayoutDashboard, LogOut, Package, ShieldCheck, UserRound } from 'lucide-react';
 import { signOutAction } from '@/lib/actions/auth';
 
 const LINKS = [
@@ -11,6 +11,7 @@ const LINKS = [
   { href: '/account/appointments', label: 'Appointments', Icon: CalendarClock, exact: false },
   { href: '/account/profile', label: 'Profile', Icon: UserRound, exact: false },
   { href: '/account/garage', label: 'Garage', Icon: Bike, exact: false },
+  { href: '/account/supplier-application', label: 'Supplier application', Icon: Building2, exact: false },
   { href: '/account/security', label: 'Security', Icon: ShieldCheck, exact: false },
 ];
 

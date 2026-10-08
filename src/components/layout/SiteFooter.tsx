@@ -35,6 +35,11 @@ export function SiteFooter() {
                 My account
               </Link>
             </li>
+            <li>
+              <Link href="/become-a-supplier" className="hover:text-accent">
+                Become a supplier
+              </Link>
+            </li>
           </ul>
         </nav>
 

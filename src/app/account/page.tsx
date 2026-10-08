@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowRight, Bike, CalendarClock, Package, ShieldCheck, UserRound, UserRoundPlus } from 'lucide-react';
+import { ArrowRight, Bike, Building2, CalendarClock, Package, ShieldCheck, UserRound, UserRoundPlus } from 'lucide-react';
 import { AppointmentStatusBadge } from '@/components/appointments/AppointmentStatusBadge';
 import { OrderStatusBadge } from '@/components/orders/OrderStatusBadge';
 import { listMyAppointments } from '@/lib/account/appointments';
 import { listMyOrders } from '@/lib/account/orders';
+import { listMySupplierApplications } from '@/lib/account/supplierApplications';
 import { appointmentStart, isUpcoming, slotLabel } from '@/lib/appointments/time';
 import { formatDate, formatMoney, formatOrderId } from '@/lib/format';
 import { orderTypeLabel } from '@/lib/orders/status';
@@ -14,6 +15,21 @@ import { displayName, getCustomerOrNull, requireUser } from '@/lib/auth/session'
 import type { SearchParams } from '@/lib/params';
 
 export const metadata: Metadata = { title: 'My account' };
+
+const SUPPLIER_STATUS_TEXT: Record<string, string> = {
+  Pending: 'under review',
+  Approved: 'approved, you can sign in to the Supplier Portal',
+  Rejected: 'not approved',
+};
+
+/** The latest supplier application, or null; a lookup problem must not break the overview. */
+async function latestSupplierApplication() {
+  try {
+    return (await listMySupplierApplications())[0] ?? null;
+  } catch {
+    return null;
+  }
+}
 
 const QUICK_LINKS = [
   { href: '/account/profile', label: 'Profile', text: 'Your name, phone and address.', Icon: UserRound },
@@ -25,6 +41,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
   const user = await requireUser('/account');
   const customer = await getCustomerOrNull();
   const notice = noticeText((await searchParams).notice);
+  const latestApplication = await latestSupplierApplication();
   const recentOrders = customer ? await listMyOrders(3) : [];
   const now = new Date();
   const nextAppointment = customer
@@ -175,6 +192,23 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
           )}
         </section>
       )}
+
+      <section aria-labelledby="supplier-heading" className="card flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex gap-3">
+          <Building2 aria-hidden="true" className="mt-0.5 h-6 w-6 shrink-0 text-accent-strong" />
+          <div>
+            <h2 id="supplier-heading" className="font-semibold">Become a supplier</h2>
+            <p className="text-sm text-ink-muted">
+              {latestApplication
+                ? `Your supplier application: ${SUPPLIER_STATUS_TEXT[latestApplication.status] ?? latestApplication.status}.`
+                : 'Supply motorcycles or spare parts to the dealership.'}
+            </p>
+          </div>
+        </div>
+        <Link href="/account/supplier-application" className="btn-outline h-10 shrink-0">
+          {latestApplication ? 'View application' : 'Apply now'}
+        </Link>
+      </section>
     </div>
   );
 }
