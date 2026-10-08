@@ -37,3 +37,22 @@ export const MAX_CART_LINES = 20;
 export const CHECKOUT_SESSION_MINUTES = 30;
 // Order ids are shown as ORD-000123.
 export const ORDER_ID_PREFIX = 'ORD-';
+
+/* ---------------------------- Workshop appointments ---------------------------- */
+// Display only: get_appointment_slots and create_my_appointment enforce the real rules.
+
+export const APPOINTMENT_OPEN_DAYS_TEXT = 'Monday to Saturday';
+export const APPOINTMENT_HOURS_TEXT = '08:30 to 16:30';
+export const APPOINTMENT_SLOT_TEXT = '1 hour';
+export const APPOINTMENT_MIN_LEAD_HOURS = 2;
+export const APPOINTMENT_MAX_ADVANCE_DAYS = 30;
+export const APPOINTMENT_CANCEL_LEAD_HOURS = 2;
+export const APPOINTMENT_TYPES = ['Service', 'Repair', 'Inspection', 'Other'] as const;
+// Start times of the 8 one-hour slots (keep in sync with get_appointment_slots).
+export const APPOINTMENT_SLOT_TIMES = ['08:30', '09:30', '10:30', '11:30', '12:30', '13:30', '14:30', '15:30'] as const;
+// Services per booking (matches create_my_appointment).
+export const APPOINTMENT_MAX_SERVICES = 5;
+
+// Dealership contact shown on appointment pages. Leave SHOP_PHONE empty to hide the number.
+export const SHOP_PHONE: string = '';
+export const WORKSHOP_HOURS_TEXT = `${APPOINTMENT_OPEN_DAYS_TEXT}, ${APPOINTMENT_HOURS_TEXT}`;
