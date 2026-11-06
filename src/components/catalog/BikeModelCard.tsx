@@ -3,7 +3,15 @@ import { ProductImage } from '@/components/ui/ProductImage';
 import { formatPriceRange, formatRange, joinList, pluralize } from '@/lib/format';
 import type { BikeModel } from '@/types/catalog';
 
-export function BikeModelCard({ model }: { model: BikeModel }) {
+interface BikeModelCardProps {
+  model: BikeModel;
+  /** `sizes` for the card image; must match the grid the card is in. */
+  imageSizes: string;
+  /** Load the image immediately (card is above the fold). */
+  eager?: boolean;
+}
+
+export function BikeModelCard({ model, imageSizes, eager = false }: BikeModelCardProps) {
   const engine = formatRange(model.min_engine_cc, model.max_engine_cc, 'cc');
   const specs = [
     engine,
@@ -14,7 +22,13 @@ export function BikeModelCard({ model }: { model: BikeModel }) {
   return (
     <article className="card group relative flex h-full flex-col overflow-hidden transition-shadow hover:shadow-md">
       <div className="relative aspect-[16/10] border-b border-line bg-card">
-        <ProductImage src={model.image_url} alt={`${model.brand} ${model.model}`} kind="bike" />
+        <ProductImage
+          src={model.image_url}
+          alt={`${model.brand} ${model.model}`}
+          kind="bike"
+          sizes={imageSizes}
+          eager={eager}
+        />
       </div>
       <div className="flex flex-1 flex-col gap-2 p-4">
         <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">{model.brand}</p>

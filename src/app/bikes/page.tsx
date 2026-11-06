@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { Bike } from 'lucide-react';
 import { ActiveFilters, type FilterChip } from '@/components/catalog/ActiveFilters';
 import { BikeModelCard } from '@/components/catalog/BikeModelCard';
+import { EAGER_CARD_COUNT, LIST_CARD_SIZES } from '@/components/catalog/image-sizes';
 import { FilterPanel } from '@/components/catalog/FilterPanel';
 import { PriceFields } from '@/components/catalog/PriceFields';
 import { SortLinks } from '@/components/catalog/SortLinks';
@@ -172,9 +173,9 @@ export default async function BikesPage({ searchParams }: { searchParams: Promis
             </EmptyState>
           ) : (
             <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {result.items.map((model) => (
+              {result.items.map((model, index) => (
                 <li key={model.model_id}>
-                  <BikeModelCard model={model} />
+                  <BikeModelCard model={model} imageSizes={LIST_CARD_SIZES} eager={index < EAGER_CARD_COUNT} />
                 </li>
               ))}
             </ul>

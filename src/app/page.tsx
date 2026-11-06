@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { ArrowRight, Tag } from 'lucide-react';
 import { BikeModelCard } from '@/components/catalog/BikeModelCard';
 import { PartCard } from '@/components/catalog/PartCard';
+import { EAGER_CARD_COUNT, HOME_CARD_SIZES } from '@/components/catalog/image-sizes';
 import { ServiceCard } from '@/components/catalog/ServiceCard';
 import { TrustStrip } from '@/components/catalog/TrustStrip';
 import { VehicleFinder } from '@/components/catalog/VehicleFinder';
@@ -100,9 +101,9 @@ export default async function HomePage() {
             <p className="text-ink-muted">No parts in stock right now. Please check back soon.</p>
           ) : (
             <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {parts.map((p) => (
+              {parts.map((p, index) => (
                 <li key={`${p.part_id}-${p.brand_id}`}>
-                  <PartCard product={p} />
+                  <PartCard product={p} imageSizes={HOME_CARD_SIZES} eager={index < EAGER_CARD_COUNT} />
                 </li>
               ))}
             </ul>
@@ -115,9 +116,9 @@ export default async function HomePage() {
             <p className="text-ink-muted">No motorcycles in stock right now. New stock arrives regularly.</p>
           ) : (
             <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {bikes.map((m) => (
+              {bikes.map((m, index) => (
                 <li key={m.model_id}>
-                  <BikeModelCard model={m} />
+                  <BikeModelCard model={m} imageSizes={HOME_CARD_SIZES} eager={index < EAGER_CARD_COUNT} />
                 </li>
               ))}
             </ul>

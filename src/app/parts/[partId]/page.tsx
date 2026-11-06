@@ -5,6 +5,7 @@ import { Check, ShieldCheck, Store, Truck } from 'lucide-react';
 import { AddToCart } from '@/components/cart/AddToCart';
 import { Breadcrumbs } from '@/components/ui/PageIntro';
 import { ProductImage } from '@/components/ui/ProductImage';
+import { DETAIL_IMAGE_SIZES } from '@/components/catalog/image-sizes';
 import { StockBadge } from '@/components/ui/StockBadge';
 import {
   DELIVERY_ESTIMATE,
@@ -117,8 +118,8 @@ export default async function PartDetailPage({ params, searchParams }: PartPageP
           <ProductImage
             src={selected.image_url}
             alt={`${selected.part_name} by ${selected.brand}`}
-            sizes="(min-width: 1024px) 50vw, 100vw"
-            preload
+            sizes={DETAIL_IMAGE_SIZES}
+            eager="high"
           />
         </div>
 

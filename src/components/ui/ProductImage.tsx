@@ -11,7 +11,12 @@ interface ProductImageProps {
   kind?: 'part' | 'bike';
   sizes?: string;
   className?: string;
-  preload?: boolean;
+  /**
+   * Above-the-fold image: load immediately instead of lazily. "high" also raises the fetch
+   * priority; use it for the single main image of a page (the likely LCP element). Next.js 16
+   * deprecates `priority`; `loading="eager"` / `fetchPriority="high"` are the documented choices.
+   */
+  eager?: boolean | 'high';
 }
 
 /** Only images from this project's public Supabase storage are rendered. */
@@ -31,7 +36,7 @@ export function ProductImage({
   kind = 'part',
   sizes = '(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw',
   className = '',
-  preload = false,
+  eager = false,
 }: ProductImageProps) {
   const [failed, setFailed] = useState(false);
 
@@ -55,7 +60,8 @@ export function ProductImage({
       alt={alt}
       fill
       sizes={sizes}
-      preload={preload}
+      loading={eager ? 'eager' : 'lazy'}
+      fetchPriority={eager === 'high' ? 'high' : undefined}
       onError={() => setFailed(true)}
       className={`object-contain p-4 ${className}`}
     />

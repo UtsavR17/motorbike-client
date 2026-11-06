@@ -5,6 +5,7 @@ import { Bike, PackageSearch, Warehouse } from 'lucide-react';
 import { ActiveFilters, type FilterChip } from '@/components/catalog/ActiveFilters';
 import { FilterPanel } from '@/components/catalog/FilterPanel';
 import { PartCard } from '@/components/catalog/PartCard';
+import { EAGER_CARD_COUNT, LIST_CARD_SIZES } from '@/components/catalog/image-sizes';
 import { PriceFields } from '@/components/catalog/PriceFields';
 import { SortLinks } from '@/components/catalog/SortLinks';
 import { CleanGetForm } from '@/components/ui/CleanGetForm';
@@ -236,9 +237,9 @@ export default async function PartsPage({ searchParams }: { searchParams: Promis
             )
           ) : (
             <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {result.items.map((product) => (
+              {result.items.map((product, index) => (
                 <li key={`${product.part_id}-${product.brand_id}`}>
-                  <PartCard product={product} />
+                  <PartCard product={product} imageSizes={LIST_CARD_SIZES} eager={index < EAGER_CARD_COUNT} />
                 </li>
               ))}
             </ul>
