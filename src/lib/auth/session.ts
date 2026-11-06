@@ -1,9 +1,15 @@
 import 'server-only';
 
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { cache } from 'react';
+import { supabaseEnv } from '@/lib/supabase/env';
 import { createClient } from '@/lib/supabase/server';
 import { loginHref } from './config';
+import { EXPIRED_COOKIE, projectRef, quietStaleSessionWarnings, readClaims } from './stale-session';
+
+// auth-js also prints the raw stale-session error; readClaims logs one short line instead.
+quietStaleSessionWarnings();
 
 export interface CurrentUser {
   id: string;
@@ -46,9 +52,21 @@ interface CustomerRow {
 /** The signed-in user from verified JWT claims (getClaims), or null for guests. */
 export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.getClaims();
-  if (error || !data?.claims?.sub) return null;
-  const claims = data.claims;
+  const cookieStore = await cookies();
+  // A dead session (e.g. refresh_token_not_found) counts as signed out; its cookies are expired.
+  const { claims, stale } = await readClaims(
+    supabase,
+    cookieStore.getAll().map((c) => c.name),
+    projectRef(supabaseEnv().url),
+  );
+  if (stale) {
+    try {
+      stale.cleared.forEach((name) => cookieStore.set(name, '', EXPIRED_COOKIE));
+    } catch {
+      // Server Components cannot set cookies; the proxy clears them on the next request.
+    }
+  }
+  if (!claims?.sub) return null;
   const meta = claims.app_metadata ?? {};
   const providers = Array.isArray(meta.providers)
     ? meta.providers.filter((p): p is string => typeof p === 'string')
