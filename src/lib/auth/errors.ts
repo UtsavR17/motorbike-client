@@ -17,6 +17,7 @@ export interface Mapped {
 
 const TOO_MANY = 'Too many attempts. Please wait a minute and try again.';
 const TOO_LONG = 'One of the values is too long.';
+export const ACCOUNT_DEACTIVATED = 'This account has been deactivated. Please contact the dealership.';
 
 function isRateLimit(e: ErrorLike): boolean {
   return (
@@ -75,6 +76,9 @@ export function classifySignUp(result: SignUpResultLike): 'exists' | 'verify' | 
 /** signInWithPassword: everything except "not confirmed" and rate limits is generic. */
 export function mapLoginError(e: ErrorLike): Mapped | 'unconfirmed' {
   if (e.code === 'email_not_confirmed' || /email not confirmed/i.test(e.message ?? '')) return 'unconfirmed';
+  // Deactivated in the Admin Panel (a Supabase ban, Fix Phase 5 / DEC-4). Only the login form says so;
+  // password reset stays neutral (mapEmailSendError, mapOtpError).
+  if (e.code === 'user_banned' || /user is banned/i.test(e.message ?? '')) return { message: ACCOUNT_DEACTIVATED };
   if (isRateLimit(e)) return { message: TOO_MANY };
   return { message: 'Incorrect email or password.' };
 }
