@@ -19,9 +19,10 @@ import { formatMoney } from '@/lib/format';
 import { modelLabel } from '@/lib/labels';
 import {
   MAX_SEARCH_LENGTH,
+  PARTS_FORM_FIELDS,
   PART_SORT_LABELS,
   parsePartsQuery,
-  partsHref,
+  partsLinks,
   type PartsQuery,
   type SearchParams,
 } from '@/lib/params';
@@ -52,22 +53,23 @@ export default async function PartsPage({ searchParams }: { searchParams: Promis
     year: model ? parsed.year : undefined,
   };
 
+  // Every link and the form's hidden fields come from one helper (Fix Phase 6).
+  const links = partsLinks(query);
   const result = await listPartProducts(query);
-  if (result.outOfRange) redirect(partsHref(query, { page: result.pageCount }));
+  if (result.outOfRange) redirect(links.page(result.pageCount));
 
-  const reset = { page: 1 };
   const fitsLabel = model
     ? `Fits: ${modelLabel(model.brand, model.model)}${query.year ? ` (${query.year})` : ''}`
     : null;
   const chips: FilterChip[] = [];
   if (fitsLabel)
-    chips.push({ key: 'model', label: fitsLabel, removeHref: partsHref(query, { ...reset, model: undefined, year: undefined }) });
-  if (query.q) chips.push({ key: 'q', label: `Search: "${query.q}"`, removeHref: partsHref(query, { ...reset, q: undefined }) });
-  if (category) chips.push({ key: 'category', label: category.category, removeHref: partsHref(query, { ...reset, category: undefined }) });
-  if (brand) chips.push({ key: 'brand', label: brand.brand, removeHref: partsHref(query, { ...reset, brand: undefined }) });
-  if (query.inStock) chips.push({ key: 'stock', label: 'In stock only', removeHref: partsHref(query, { ...reset, inStock: false }) });
-  if (query.min !== undefined) chips.push({ key: 'min', label: `Min ${formatMoney(query.min)}`, removeHref: partsHref(query, { ...reset, min: undefined }) });
-  if (query.max !== undefined) chips.push({ key: 'max', label: `Max ${formatMoney(query.max)}`, removeHref: partsHref(query, { ...reset, max: undefined }) });
+    chips.push({ key: 'model', label: fitsLabel, removeHref: links.remove('model') });
+  if (query.q) chips.push({ key: 'q', label: `Search: "${query.q}"`, removeHref: links.remove('q') });
+  if (category) chips.push({ key: 'category', label: category.category, removeHref: links.remove('category') });
+  if (brand) chips.push({ key: 'brand', label: brand.brand, removeHref: links.remove('brand') });
+  if (query.inStock) chips.push({ key: 'stock', label: 'In stock only', removeHref: links.remove('stock') });
+  if (query.min !== undefined) chips.push({ key: 'min', label: `Min ${formatMoney(query.min)}`, removeHref: links.remove('min') });
+  if (query.max !== undefined) chips.push({ key: 'max', label: `Max ${formatMoney(query.max)}`, removeHref: links.remove('max') });
 
   const otherFilters = chips.filter((c) => c.key !== 'model').length;
 
@@ -91,7 +93,7 @@ export default async function PartsPage({ searchParams }: { searchParams: Promis
               return (
                 <Link
                   key={`${chip.modelId}-${chip.year ?? ''}`}
-                  href={partsHref(query, { model: chip.modelId, year: chip.year ?? undefined, page: 1 })}
+                  href={links.withBike(chip.modelId, chip.year ?? undefined)}
                   aria-current={active ? 'true' : undefined}
                   className={`rounded-full border px-3 py-1 text-sm font-medium transition-colors ${
                     active ? 'border-ink bg-ink text-white' : 'border-line bg-card hover:border-ink'
@@ -109,7 +111,7 @@ export default async function PartsPage({ searchParams }: { searchParams: Promis
         <aside aria-label="Filters">
           <FilterPanel activeCount={chips.length}>
             <CleanGetForm
-              key={partsHref(query)}
+              key={links.self}
               action="/parts"
               aria-label="Filter parts"
               className="card space-y-5 p-4"
@@ -173,18 +175,23 @@ export default async function PartsPage({ searchParams }: { searchParams: Promis
 
               <PriceFields min={query.min} max={query.max} />
 
-              {/* Keep the selected bike and sort order when filters change. */}
-              {query.model && <input type="hidden" name="model" value={query.model} />}
-              {query.model && query.year && <input type="hidden" name="year" value={query.year} />}
-              {query.sort !== 'name' && <input type="hidden" name="sort" value={query.sort} />}
+              {/* Every other parameter (bike, year, sort) travels along; the page resets to 1. */}
+              {links.hiddenFields(PARTS_FORM_FIELDS).map(([name, value]) => (
+                <input key={name} type="hidden" name={name} value={value} />
+              ))}
 
               <div className="flex flex-col gap-2">
                 <button type="submit" className="btn-dark w-full">
                   Apply filters
                 </button>
-                {chips.length > 0 && (
-                  <Link href="/parts" className="btn-outline w-full">
+                {links.hasFilters && (
+                  <Link href={links.clearFilters} className="btn-outline w-full">
                     Clear filters
+                  </Link>
+                )}
+                {query.q && (
+                  <Link href={links.clearSearch} className="btn-outline w-full">
+                    Clear search
                   </Link>
                 )}
               </div>
@@ -201,11 +208,15 @@ export default async function PartsPage({ searchParams }: { searchParams: Promis
             <SortLinks
               current={query.sort}
               options={PART_SORT_LABELS}
-              hrefFor={(sort) => partsHref(query, { sort, page: 1 })}
+              hrefFor={links.sort}
             />
           </div>
 
-          <ActiveFilters chips={chips} clearHref="/parts" />
+          <ActiveFilters
+            chips={chips}
+            clearFiltersHref={links.hasFilters ? links.clearFilters : null}
+            clearSearchHref={query.q ? links.clearSearch : null}
+          />
 
           {result.items.length === 0 ? (
             model && otherFilters === 0 ? (
@@ -213,7 +224,7 @@ export default async function PartsPage({ searchParams }: { searchParams: Promis
                 icon={Bike}
                 title="No compatible parts listed for this bike yet"
                 action={
-                  <Link href={partsHref(query, { ...reset, model: undefined, year: undefined })} className="btn-dark">
+                  <Link href={links.remove('model')} className="btn-dark">
                     Show all parts
                   </Link>
                 }
@@ -226,8 +237,8 @@ export default async function PartsPage({ searchParams }: { searchParams: Promis
                 icon={PackageSearch}
                 title="No parts match your filters"
                 action={
-                  <Link href="/parts" className="btn-dark">
-                    Clear filters
+                  <Link href={links.hasFilters ? links.clearFilters : links.clearSearch} className="btn-dark">
+                    {links.hasFilters ? 'Clear filters' : 'Clear search'}
                   </Link>
                 }
               >
@@ -247,7 +258,7 @@ export default async function PartsPage({ searchParams }: { searchParams: Promis
           <Pagination
             page={result.page}
             pageCount={result.pageCount}
-            hrefFor={(page) => partsHref(query, { page })}
+            hrefFor={links.page}
           />
         </section>
       </div>

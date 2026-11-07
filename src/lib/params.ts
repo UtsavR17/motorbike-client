@@ -199,3 +199,109 @@ export function bikesHref(query: BikesQuery, overrides: Partial<BikesQuery> = {}
   const s = p.toString();
   return s ? `/bikes?${s}` : '/bikes';
 }
+
+/* ------------------------- Listing links (Fix Phase 6) ------------------------- */
+// Every link and the filter form of /parts and /bikes are built here, so search, filters,
+// sort, page and the vehicle finder can never drop each other again:
+// - sort links and pagination keep everything (sort resets the page);
+// - removing one chip removes only that filter (or only the search);
+// - "Clear filters" keeps the search and the sort; "Clear search" keeps the filters and the sort;
+// - the filter form carries every other parameter as hidden fields and resets the page.
+
+export interface ListingLinks<Key extends string, Sort extends string> {
+  /** The current page link. */
+  self: string;
+  page: (page: number) => string;
+  sort: (sort: Sort) => string;
+  /** Removes one filter (or the search) and goes back to page 1. */
+  remove: (key: Key) => string;
+  clearFilters: string;
+  clearSearch: string;
+  hasFilters: boolean;
+  /** Parameters the filter form must carry as hidden inputs (all except its visible fields and page). */
+  hiddenFields: (visible: readonly string[]) => [string, string][];
+}
+
+function hiddenFrom(href: string, visible: readonly string[]): [string, string][] {
+  const qs = href.includes('?') ? href.slice(href.indexOf('?') + 1) : '';
+  return [...new URLSearchParams(qs)].filter(([name]) => name !== 'page' && !visible.includes(name));
+}
+
+export type PartsLinkKey = 'q' | 'category' | 'brand' | 'stock' | 'min' | 'max' | 'model';
+
+const PART_REMOVALS: Record<PartsLinkKey, Partial<PartsQuery>> = {
+  q: { q: undefined },
+  category: { category: undefined },
+  brand: { brand: undefined },
+  stock: { inStock: false },
+  min: { min: undefined },
+  max: { max: undefined },
+  model: { model: undefined, year: undefined },
+};
+
+const PART_FILTERS_CLEARED: Partial<PartsQuery> = {
+  category: undefined,
+  brand: undefined,
+  inStock: false,
+  min: undefined,
+  max: undefined,
+  model: undefined,
+  year: undefined,
+};
+
+/** Fields of the /parts filter form; everything else travels as hidden inputs. */
+export const PARTS_FORM_FIELDS = ['q', 'category', 'brand', 'stock', 'min', 'max'] as const;
+
+export function partsLinks(query: PartsQuery): ListingLinks<PartsLinkKey, PartSort> & {
+  withBike: (model: number, year?: number) => string;
+} {
+  return {
+    self: partsHref(query),
+    page: (page) => partsHref(query, { page }),
+    sort: (sort) => partsHref(query, { sort, page: 1 }),
+    remove: (key) => partsHref(query, { ...PART_REMOVALS[key], page: 1 }),
+    clearFilters: partsHref(query, { ...PART_FILTERS_CLEARED, page: 1 }),
+    clearSearch: partsHref(query, { q: undefined, page: 1 }),
+    hasFilters: Boolean(
+      query.category || query.brand || query.inStock || query.min !== undefined || query.max !== undefined || query.model,
+    ),
+    hiddenFields: (visible) => hiddenFrom(partsHref(query, { page: 1 }), visible),
+    withBike: (model, year) => partsHref(query, { model, year, page: 1 }),
+  };
+}
+
+export type BikesLinkKey = 'q' | 'brand' | 'fuel' | 'transmission' | 'min' | 'max';
+
+const BIKE_REMOVALS: Record<BikesLinkKey, Partial<BikesQuery>> = {
+  q: { q: undefined },
+  brand: { brand: undefined },
+  fuel: { fuel: undefined },
+  transmission: { transmission: undefined },
+  min: { min: undefined },
+  max: { max: undefined },
+};
+
+/** Fields of the /bikes filter form; everything else travels as hidden inputs. */
+export const BIKES_FORM_FIELDS = ['q', 'brand', 'fuel', 'transmission', 'min', 'max'] as const;
+
+export function bikesLinks(query: BikesQuery): ListingLinks<BikesLinkKey, BikeSort> {
+  return {
+    self: bikesHref(query),
+    page: (page) => bikesHref(query, { page }),
+    sort: (sort) => bikesHref(query, { sort, page: 1 }),
+    remove: (key) => bikesHref(query, { ...BIKE_REMOVALS[key], page: 1 }),
+    clearFilters: bikesHref(query, {
+      brand: undefined,
+      fuel: undefined,
+      transmission: undefined,
+      min: undefined,
+      max: undefined,
+      page: 1,
+    }),
+    clearSearch: bikesHref(query, { q: undefined, page: 1 }),
+    hasFilters: Boolean(
+      query.brand || query.fuel || query.transmission || query.min !== undefined || query.max !== undefined,
+    ),
+    hiddenFields: (visible) => hiddenFrom(bikesHref(query, { page: 1 }), visible),
+  };
+}

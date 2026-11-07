@@ -7,8 +7,20 @@ export interface FilterChip {
   removeHref: string;
 }
 
-/** Removable chips for every active filter, plus a "Clear filters" link. */
-export function ActiveFilters({ chips, clearHref }: { chips: FilterChip[]; clearHref: string }) {
+/**
+ * Removable chips for the search and every active filter. "Clear filters" keeps the search and
+ * "Clear search" keeps the filters (Fix Phase 6); each link is shown only when it would change
+ * something.
+ */
+export function ActiveFilters({
+  chips,
+  clearFiltersHref,
+  clearSearchHref,
+}: {
+  chips: FilterChip[];
+  clearFiltersHref?: string | null;
+  clearSearchHref?: string | null;
+}) {
   if (chips.length === 0) return null;
   return (
     <div className="flex flex-wrap items-center gap-2" aria-label="Active filters" role="group">
@@ -23,9 +35,16 @@ export function ActiveFilters({ chips, clearHref }: { chips: FilterChip[]; clear
           <X aria-hidden="true" className="h-3.5 w-3.5" />
         </Link>
       ))}
-      <Link href={clearHref} className="link px-1 text-sm">
-        Clear filters
-      </Link>
+      {clearFiltersHref && (
+        <Link href={clearFiltersHref} className="link px-1 text-sm">
+          Clear filters
+        </Link>
+      )}
+      {clearSearchHref && (
+        <Link href={clearSearchHref} className="link px-1 text-sm">
+          Clear search
+        </Link>
+      )}
     </div>
   );
 }
