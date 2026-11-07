@@ -4,6 +4,7 @@ import { ArrowRight, PackageSearch, Search } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { BikeModelCard } from '@/components/catalog/BikeModelCard';
 import { PartCard } from '@/components/catalog/PartCard';
+import { EAGER_CARD_COUNT, HOME_CARD_SIZES } from '@/components/catalog/image-sizes';
 import { CleanGetForm } from '@/components/ui/CleanGetForm';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { PageIntro } from '@/components/ui/PageIntro';
@@ -54,7 +55,7 @@ function Section<T>({
 }: {
   id: string;
   section: SearchSection<T>;
-  render: (item: T) => ReactNode;
+  render: (item: T, index: number) => ReactNode;
 }) {
   return (
     <section aria-labelledby={`${id}-heading`} className="space-y-4">
@@ -73,7 +74,8 @@ function Section<T>({
       {section.total === 0 ? (
         <p className="card px-4 py-6 text-sm text-ink-muted">{section.emptyText}.</p>
       ) : (
-        <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{section.items.map(render)}</ul>
+        // Same grid and image sizes as the home page sections (2 columns from sm, 4 from lg).
+        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{section.items.map(render)}</ul>
       )}
     </section>
   );
@@ -128,18 +130,22 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
             <Section
               id="search-bikes"
               section={view.bikes}
-              render={(model) => (
+              render={(model, index) => (
                 <li key={model.model_id}>
-                  <BikeModelCard model={model} />
+                  <BikeModelCard model={model} imageSizes={HOME_CARD_SIZES} eager={index < EAGER_CARD_COUNT} />
                 </li>
               )}
             />
             <Section
               id="search-parts"
               section={view.parts}
-              render={(product) => (
+              render={(product, index) => (
                 <li key={`${product.part_id}-${product.brand_id}`}>
-                  <PartCard product={product} />
+                  <PartCard
+                    product={product}
+                    imageSizes={HOME_CARD_SIZES}
+                    eager={view.bikes.total === 0 && index < EAGER_CARD_COUNT}
+                  />
                 </li>
               )}
             />
