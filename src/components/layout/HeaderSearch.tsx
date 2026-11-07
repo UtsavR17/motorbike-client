@@ -2,12 +2,12 @@ import { Search } from 'lucide-react';
 import { CleanGetForm } from '@/components/ui/CleanGetForm';
 import { MAX_SEARCH_LENGTH } from '@/lib/params';
 
-/** Searches parts by name and opens the parts listing (/parts?q=...). */
+/** Searches motorcycles and spare parts and opens the unified results page (/search?q=...). */
 export function HeaderSearch({ id, onNavigate }: { id: string; onNavigate?: () => void }) {
   return (
-    <CleanGetForm action="/parts" role="search" aria-label="Search parts" onNavigate={onNavigate} className="w-full">
+    <CleanGetForm action="/search" role="search" aria-label="Search the shop" onNavigate={onNavigate} className="w-full">
       <label htmlFor={id} className="sr-only">
-        Search parts
+        Search motorcycles and spare parts
       </label>
       <div className="relative">
         <input
@@ -15,7 +15,7 @@ export function HeaderSearch({ id, onNavigate }: { id: string; onNavigate?: () =
           name="q"
           type="search"
           maxLength={MAX_SEARCH_LENGTH}
-          placeholder="Search parts, e.g. spark plug"
+          placeholder="Search bikes and parts, e.g. Yamaha"
           autoComplete="off"
           className="h-10 w-full rounded-control border border-white/15 bg-white pl-3 pr-11 text-sm text-ink placeholder:text-ink-muted focus:border-accent"
         />

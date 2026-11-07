@@ -6,7 +6,8 @@ import { toNumber } from '@/lib/format';
 import type { BikeFacetOptions, BikesQuery } from '@/lib/params';
 import { createClient } from '@/lib/supabase/server';
 import type { Bike, BikeModel, BikeModelRow, BikeRow, Brand, Paged } from '@/types/catalog';
-import { containsPattern, fail, isRangeError, pageCount, pageRange } from './shared';
+import { applyBikesQuery, type FilterChain } from './query';
+import { fail, isRangeError, pageCount, pageRange } from './shared';
 
 // Explicit column lists: the views expose no VIN, but never select "*" either.
 const MODEL_COLUMNS =
@@ -65,29 +66,10 @@ export const getBikeFacets = cache(async (): Promise<BikeFacets> => {
   };
 });
 
+/** Filters, search (every term on search_text: brand, model, colours, fuel, gearbox) and sort. */
 function buildModelsQuery(supabase: Supabase, q: BikesQuery) {
-  let req = supabase.from('catalog_bike_models').select(MODEL_COLUMNS, { count: 'exact' });
-  if (q.brand) req = req.eq('brand_id', q.brand);
-  // Array columns: the value comes from the facet whitelist, never raw user input.
-  if (q.fuel) req = req.contains('fuel_types', [q.fuel]);
-  if (q.transmission) req = req.contains('transmissions', [q.transmission]);
-  if (q.min !== undefined) req = req.gte('max_price', q.min);
-  if (q.max !== undefined) req = req.lte('min_price', q.max);
-  if (q.q) req = req.ilike('model', containsPattern(q.q));
-
-  switch (q.sort) {
-    case 'price_desc':
-      req = req.order('max_price', { ascending: false });
-      break;
-    case 'name':
-      break;
-    default:
-      req = req.order('min_price', { ascending: true });
-  }
-  return req
-    .order('brand', { ascending: true })
-    .order('model', { ascending: true })
-    .order('model_id', { ascending: true });
+  const req = supabase.from('catalog_bike_models').select(MODEL_COLUMNS, { count: 'exact' });
+  return applyBikesQuery(req as unknown as FilterChain, q) as unknown as typeof req;
 }
 
 export async function listBikeModels(

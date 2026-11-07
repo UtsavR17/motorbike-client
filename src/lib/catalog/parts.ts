@@ -13,7 +13,8 @@ import type {
   PartVariantRow,
   StockStatus,
 } from '@/types/catalog';
-import { containsPattern, fail, isRangeError, pageCount, pageRange } from './shared';
+import { applyPartsQuery, type FilterChain } from './query';
+import { fail, isRangeError, pageCount, pageRange } from './shared';
 
 const PRODUCT_COLUMNS =
   'part_id,brand_id,part_name,part_description,image_url,category_id,category,brand,min_price,max_price,variant_count,in_stock';
@@ -45,32 +46,10 @@ function productSource(supabase: Supabase, q: PartsQuery) {
   return supabase.from('catalog_part_products').select(PRODUCT_COLUMNS, { count: 'exact' });
 }
 
+/** Filters, search (every term on search_text) and sort; the RPC rows carry search_text too. */
 function buildProductsQuery(supabase: Supabase, q: PartsQuery) {
-  let req = productSource(supabase, q);
-  if (q.category) req = req.eq('category_id', q.category);
-  if (q.brand) req = req.eq('brand_id', q.brand);
-  if (q.inStock) req = req.eq('in_stock', true);
-  // Price filter keeps products whose price range overlaps [min, max].
-  if (q.min !== undefined) req = req.gte('max_price', q.min);
-  if (q.max !== undefined) req = req.lte('min_price', q.max);
-  if (q.q) req = req.ilike('part_name', containsPattern(q.q));
-
-  switch (q.sort) {
-    case 'price_asc':
-      req = req.order('min_price', { ascending: true });
-      break;
-    case 'price_desc':
-      req = req.order('max_price', { ascending: false });
-      break;
-    default:
-      break;
-  }
-  // Stable tie-breakers so pagination never repeats or skips a product.
-  return req
-    .order('part_name', { ascending: true })
-    .order('brand', { ascending: true })
-    .order('part_id', { ascending: true })
-    .order('brand_id', { ascending: true });
+  const req = productSource(supabase, q);
+  return applyPartsQuery(req as unknown as FilterChain, q) as unknown as typeof req;
 }
 
 /**

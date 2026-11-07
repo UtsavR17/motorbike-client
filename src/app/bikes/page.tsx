@@ -13,11 +13,14 @@ import { PageIntro } from '@/components/ui/PageIntro';
 import { Pagination, ResultCount } from '@/components/ui/Pagination';
 import { PAGE_SIZE } from '@/config/shop';
 import { getBikeFacets, listBikeModels } from '@/lib/catalog/bikes';
+import { emptyListing, resultsHeadline } from '@/lib/catalog/search-page';
 import { formatMoney } from '@/lib/format';
 import {
   BIKE_SORT_LABELS,
+  BIKES_FORM_FIELDS,
   MAX_SEARCH_LENGTH,
-  bikesHref,
+  bikesLinks,
+  bikesWithoutFilters,
   parseBikesQuery,
   type BikesQuery,
   type SearchParams,
@@ -34,18 +37,24 @@ export default async function BikesPage({ searchParams }: { searchParams: Promis
   const brand = facets.brands.find((b) => b.brand_id === parsed.brand);
   const query: BikesQuery = { ...parsed, brand: brand?.brand_id };
 
+  // Every link and the form's hidden fields come from one helper (Fix Phase 6).
+  const links = bikesLinks(query);
   const result = await listBikeModels(query);
-  if (result.outOfRange) redirect(bikesHref(query, { page: result.pageCount }));
+  if (result.outOfRange) redirect(links.page(result.pageCount));
+  // Only for an empty filtered page: would the same search find models without the filters?
+  const unfilteredTotal =
+    result.total === 0 && links.hasFilters ? (await listBikeModels(bikesWithoutFilters(query), 1)).total : 0;
+  const empty = emptyListing('motorcycles', query.q, links.hasFilters, unfilteredTotal);
+  const headline = resultsHeadline(result.total, query.q);
 
-  const reset = { page: 1 };
   const chips: FilterChip[] = [];
-  if (query.q) chips.push({ key: 'q', label: `Search: "${query.q}"`, removeHref: bikesHref(query, { ...reset, q: undefined }) });
-  if (brand) chips.push({ key: 'brand', label: brand.brand, removeHref: bikesHref(query, { ...reset, brand: undefined }) });
-  if (query.fuel) chips.push({ key: 'fuel', label: query.fuel, removeHref: bikesHref(query, { ...reset, fuel: undefined }) });
+  if (query.q) chips.push({ key: 'q', label: `Search: "${query.q}"`, removeHref: links.remove('q') });
+  if (brand) chips.push({ key: 'brand', label: brand.brand, removeHref: links.remove('brand') });
+  if (query.fuel) chips.push({ key: 'fuel', label: query.fuel, removeHref: links.remove('fuel') });
   if (query.transmission)
-    chips.push({ key: 'transmission', label: query.transmission, removeHref: bikesHref(query, { ...reset, transmission: undefined }) });
-  if (query.min !== undefined) chips.push({ key: 'min', label: `Min ${formatMoney(query.min)}`, removeHref: bikesHref(query, { ...reset, min: undefined }) });
-  if (query.max !== undefined) chips.push({ key: 'max', label: `Max ${formatMoney(query.max)}`, removeHref: bikesHref(query, { ...reset, max: undefined }) });
+    chips.push({ key: 'transmission', label: query.transmission, removeHref: links.remove('transmission') });
+  if (query.min !== undefined) chips.push({ key: 'min', label: `Min ${formatMoney(query.min)}`, removeHref: links.remove('min') });
+  if (query.max !== undefined) chips.push({ key: 'max', label: `Max ${formatMoney(query.max)}`, removeHref: links.remove('max') });
 
   return (
     <>
@@ -58,7 +67,7 @@ export default async function BikesPage({ searchParams }: { searchParams: Promis
       <div className="container-page grid gap-6 py-6 lg:grid-cols-[260px_1fr] lg:gap-8 lg:py-8">
         <aside aria-label="Filters">
           <FilterPanel activeCount={chips.length}>
-            <CleanGetForm key={bikesHref(query)} action="/bikes" aria-label="Filter motorcycles" className="card space-y-5 p-4">
+            <CleanGetForm key={links.self} action="/bikes" aria-label="Filter motorcycles" className="card space-y-5 p-4">
               <div>
                 <label htmlFor="filter-q" className="field-label">
                   Search
@@ -123,15 +132,23 @@ export default async function BikesPage({ searchParams }: { searchParams: Promis
 
               <PriceFields min={query.min} max={query.max} />
 
-              {query.sort !== 'price_asc' && <input type="hidden" name="sort" value={query.sort} />}
+              {/* Every other parameter (sort) travels along; the page resets to 1. */}
+              {links.hiddenFields(BIKES_FORM_FIELDS).map(([name, value]) => (
+                <input key={name} type="hidden" name={name} value={value} />
+              ))}
 
               <div className="flex flex-col gap-2">
                 <button type="submit" className="btn-dark w-full">
                   Apply filters
                 </button>
-                {chips.length > 0 && (
-                  <Link href="/bikes" className="btn-outline w-full">
+                {links.hasFilters && (
+                  <Link href={links.clearFilters} className="btn-outline w-full">
                     Clear filters
+                  </Link>
+                )}
+                {query.q && (
+                  <Link href={links.clearSearch} className="btn-outline w-full">
+                    Clear search
                   </Link>
                 )}
               </div>
@@ -144,32 +161,43 @@ export default async function BikesPage({ searchParams }: { searchParams: Promis
             Results
           </h2>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <ResultCount page={result.page} pageSize={PAGE_SIZE} total={result.total} />
+            <div>
+              {headline && <p className="font-semibold">{headline}</p>}
+              <ResultCount page={result.page} pageSize={PAGE_SIZE} total={result.total} />
+            </div>
             <SortLinks
               current={query.sort}
               options={BIKE_SORT_LABELS}
-              hrefFor={(sort) => bikesHref(query, { sort, page: 1 })}
+              hrefFor={links.sort}
             />
           </div>
 
-          <ActiveFilters chips={chips} clearHref="/bikes" />
+          <ActiveFilters
+            chips={chips}
+            clearFiltersHref={links.hasFilters ? links.clearFilters : null}
+            clearSearchHref={query.q ? links.clearSearch : null}
+          />
 
           {result.items.length === 0 ? (
-            <EmptyState
-              icon={Bike}
-              title={chips.length > 0 ? 'No motorcycles match your filters' : 'No motorcycles in stock right now'}
-              action={
-                chips.length > 0 ? (
-                  <Link href="/bikes" className="btn-dark">
-                    Clear filters
-                  </Link>
-                ) : undefined
-              }
-            >
-              {chips.length > 0
-                ? 'Try another brand, fuel type or a wider price range.'
-                : 'New stock arrives regularly. Please check back soon.'}
-            </EmptyState>
+            chips.length === 0 ? (
+              <EmptyState icon={Bike} title="No motorcycles in stock right now">
+                New stock arrives regularly. Please check back soon.
+              </EmptyState>
+            ) : (
+              <EmptyState
+                icon={Bike}
+                title={empty.title}
+                action={
+                  empty.action && (
+                    <Link href={empty.action === 'clearFilters' ? links.clearFilters : links.clearSearch} className="btn-dark">
+                      {empty.action === 'clearFilters' ? 'Clear filters' : 'Clear search'}
+                    </Link>
+                  )
+                }
+              >
+                {empty.body}
+              </EmptyState>
+            )
           ) : (
             <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {result.items.map((model) => (
@@ -180,7 +208,7 @@ export default async function BikesPage({ searchParams }: { searchParams: Promis
             </ul>
           )}
 
-          <Pagination page={result.page} pageCount={result.pageCount} hrefFor={(page) => bikesHref(query, { page })} />
+          <Pagination page={result.page} pageCount={result.pageCount} hrefFor={links.page} />
         </section>
       </div>
     </>
