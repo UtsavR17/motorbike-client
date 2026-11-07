@@ -2,6 +2,7 @@ import 'server-only';
 
 import { getModels } from '@/lib/catalog/lookups';
 import { getCurrentUser, getCustomerOrNull } from '@/lib/auth/session';
+import { bikeIdsWithAppointments } from '@/lib/auth/errors';
 import { modelLabel } from '@/lib/labels';
 import { createClient } from '@/lib/supabase/server';
 
@@ -71,6 +72,21 @@ export async function getMyBike(customerId: number, bikeId: number): Promise<Gar
   }
   if (!data) return null;
   return (await withModelNames([data as BikeRow]))[0];
+}
+
+/**
+ * Ids of the customer's bikes that have at least one appointment (one query per page, through
+ * the my_appointments view). Used to disable Delete; the database still refuses (23503).
+ * A failed lookup returns an empty set: Delete then stays available and the server reports it.
+ */
+export async function bikesWithAppointments(): Promise<Set<number>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from('my_appointments').select('bike_id');
+  if (error) {
+    console.error(`[garage] appointment lookup failed: ${error.code ?? 'unknown'}`);
+    return new Set();
+  }
+  return bikeIdsWithAppointments((data ?? []) as { bike_id?: unknown }[]);
 }
 
 export function bikeName(bike: Pick<GarageBike, 'brand' | 'model'>): string {

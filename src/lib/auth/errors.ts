@@ -192,6 +192,25 @@ export const BIKE_TAKEN =
   'This VIN or registration number is already registered. If this is your bike, please contact the dealership.';
 export const BIKE_HAS_APPOINTMENTS = 'This bike has appointments and cannot be deleted.';
 
+export const BIKE_DELETE_GONE = 'This bike could not be deleted. It may already have been removed.';
+export const BIKE_DELETE_FAILED = 'We could not delete this bike right now. Please try again.';
+
+/**
+ * Message for a garage delete (ISS-10), or null when one row was deleted.
+ * 23503 = the bike has appointments; zero rows = RLS or already gone; anything else is generic.
+ */
+export function bikeDeleteMessage(error: ErrorLike | null | undefined, deletedRows: number): string | null {
+  if (error) return error.code === '23503' ? BIKE_HAS_APPOINTMENTS : BIKE_DELETE_FAILED;
+  return deletedRows > 0 ? null : BIKE_DELETE_GONE;
+}
+
+/** Bike ids that have at least one appointment, from my_appointments rows (one query per page). */
+export function bikeIdsWithAppointments(rows: ReadonlyArray<{ bike_id?: unknown }>): Set<number> {
+  const ids = new Set<number>();
+  for (const r of rows) if (typeof r.bike_id === 'number') ids.add(r.bike_id);
+  return ids;
+}
+
 export function mapBikeError(op: 'add' | 'edit' | 'delete', e: ErrorLike): Mapped {
   const text = `${e.message ?? ''} ${e.details ?? ''}`;
   if (e.code === '23505') return { message: BIKE_TAKEN };

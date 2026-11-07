@@ -4,7 +4,7 @@ import { Bike, CalendarCheck, Pencil, Plus, Search } from 'lucide-react';
 import { DeleteBikeButton } from '@/components/account/GarageForms';
 import { Notice } from '@/components/forms/FormMessage';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { bikeName, listMyBikes } from '@/lib/account/garage';
+import { bikeName, bikesWithAppointments, listMyBikes } from '@/lib/account/garage';
 import { noticeText } from '@/lib/account/notices';
 import { requireCustomer } from '@/lib/auth/session';
 import type { SearchParams } from '@/lib/params';
@@ -19,7 +19,7 @@ function shopHref(modelId: number, year: number | null): string {
 
 export default async function GaragePage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const { customer } = await requireCustomer('/account/garage');
-  const bikes = await listMyBikes(customer.id);
+  const [bikes, withAppointments] = await Promise.all([listMyBikes(customer.id), bikesWithAppointments()]);
   const notice = noticeText((await searchParams).notice);
 
   return (
@@ -90,7 +90,7 @@ export default async function GaragePage({ searchParams }: { searchParams: Promi
                     <Pencil aria-hidden="true" className="h-4 w-4" />
                     Edit<span className="sr-only"> {name}</span>
                   </Link>
-                  <DeleteBikeButton bikeId={bike.id} name={name} />
+                  <DeleteBikeButton bikeId={bike.id} name={name} hasAppointments={withAppointments.has(bike.id)} />
                 </div>
               </li>
             );

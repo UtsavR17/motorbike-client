@@ -1,7 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { mapBikeError } from '@/lib/auth/errors';
+import { bikeDeleteMessage, mapBikeError } from '@/lib/auth/errors';
 import { requireCustomer } from '@/lib/auth/session';
 import { bikeAddSchema, bikeEditSchema, bikeIdSchema, fieldErrorsFrom, readForm } from '@/lib/auth/validation';
 import { getModel } from '@/lib/catalog/lookups';
@@ -62,7 +62,8 @@ export async function deleteBikeAction(_prev: FormState, formData: FormData): Pr
     .eq('BikeID', parsedId.data)
     .eq('Customer_CustomerID', customer.id)
     .select('BikeID');
-  if (error) return errorState(undefined, mapBikeError('delete', error));
-  if (!data || data.length === 0) return errorState(undefined, { message: 'This bike was not found in your garage.' });
+  // Always a visible answer (ISS-10): appointments (23503), nothing deleted, or another error.
+  const message = bikeDeleteMessage(error, data?.length ?? 0);
+  if (message) return errorState(undefined, { message });
   redirect('/account/garage?notice=bike-deleted');
 }

@@ -5,10 +5,14 @@ import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 import {
   ACCOUNT_EXISTS_MSG,
+  BIKE_DELETE_FAILED,
+  BIKE_DELETE_GONE,
   BIKE_HAS_APPOINTMENTS,
   BIKE_TAKEN,
   NIC_TAKEN,
   PHONE_TAKEN,
+  bikeDeleteMessage,
+  bikeIdsWithAppointments,
   classifySignUp,
   mapBikeError,
   mapEmailSendError,
@@ -312,5 +316,22 @@ describe('classifySignUp (DEC-11)', () => {
 
   test('the message wording', () => {
     assert.equal(ACCOUNT_EXISTS_MSG, 'An account with this email already exists. Sign in or reset your password.');
+  });
+});
+
+describe('garage delete feedback (ISS-10)', () => {
+  test('every outcome has a message, success has none', () => {
+    assert.equal(bikeDeleteMessage({ code: '23503' }, 0), BIKE_HAS_APPOINTMENTS);
+    assert.equal(bikeDeleteMessage(null, 0), BIKE_DELETE_GONE);
+    assert.equal(bikeDeleteMessage(undefined, 0), 'This bike could not be deleted. It may already have been removed.');
+    assert.equal(bikeDeleteMessage({ code: '42501' }, 0), BIKE_DELETE_FAILED);
+    assert.equal(bikeDeleteMessage({ code: 'PGRST000', message: 'network' }, 0), BIKE_DELETE_FAILED);
+    assert.equal(bikeDeleteMessage(null, 1), null);
+  });
+
+  test('bikes with appointments are found from my_appointments rows', () => {
+    const ids = bikeIdsWithAppointments([{ bike_id: 5 }, { bike_id: 5 }, { bike_id: 9 }, { bike_id: null }, {}]);
+    assert.deepEqual([...ids].sort(), [5, 9]);
+    assert.equal(bikeIdsWithAppointments([]).size, 0);
   });
 });
