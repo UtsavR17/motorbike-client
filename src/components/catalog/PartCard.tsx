@@ -8,11 +8,19 @@ export function partHref(partId: number, brandId: number): string {
   return `/parts/${partId}?brand=${brandId}`;
 }
 
-export function PartCard({ product }: { product: PartProduct }) {
+interface PartCardProps {
+  product: PartProduct;
+  /** `sizes` for the card image; must match the grid the card is in. */
+  imageSizes: string;
+  /** Load the image immediately (card is above the fold). */
+  eager?: boolean;
+}
+
+export function PartCard({ product, imageSizes, eager = false }: PartCardProps) {
   return (
     <article className="card group relative flex h-full flex-col overflow-hidden transition-shadow hover:shadow-md">
       <div className="relative aspect-[16/9] border-b border-line bg-card sm:aspect-[4/3]">
-        <ProductImage src={product.image_url} alt={product.part_name} />
+        <ProductImage src={product.image_url} alt={product.part_name} sizes={imageSizes} eager={eager} />
       </div>
       <div className="flex flex-1 flex-col gap-2 p-4">
         <div className="flex flex-wrap items-center gap-x-2 text-xs font-medium uppercase tracking-wide text-ink-muted">

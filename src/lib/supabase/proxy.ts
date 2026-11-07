@@ -1,6 +1,10 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { projectRef, quietStaleSessionWarnings, readClaims, withoutAuthCookies } from '@/lib/auth/stale-session';
 import { supabaseEnv } from './env';
+
+// auth-js also prints the raw stale-session error; readClaims logs one short line instead.
+quietStaleSessionWarnings();
 
 // Pages a signed-in user has no reason to see.
 const GUEST_ONLY = ['/login', '/register', '/forgot-password'];
@@ -8,6 +12,8 @@ const GUEST_ONLY = ['/login', '/register', '/forgot-password'];
 function matches(pathname: string, base: string): boolean {
   return pathname === base || pathname.startsWith(`${base}/`);
 }
+
+const CACHE_HEADERS = ['cache-control', 'expires', 'pragma'];
 
 /**
  * Refreshes the Supabase session cookie on each request (Supabase Next.js pattern) and
@@ -38,8 +44,16 @@ export async function updateSession(request: NextRequest) {
 
   // Do not run code between createServerClient and getClaims():
   // getClaims() validates the JWT and triggers the token refresh when needed.
-  const { data } = await supabase.auth.getClaims();
-  const signedIn = Boolean(data?.claims?.sub);
+  // A dead session (e.g. refresh_token_not_found) counts as signed out.
+  const { claims, stale } = await readClaims(
+    supabase,
+    request.cookies.getAll().map((c) => c.name),
+    projectRef(url),
+  );
+  const signedIn = Boolean(claims?.sub);
+  if (stale) {
+    response = withoutAuthCookies(request.cookies, response, stale.cleared, () => NextResponse.next({ request }));
+  }
   const { pathname, search } = request.nextUrl;
 
   let target: URL | null = null;
@@ -54,7 +68,7 @@ export async function updateSession(request: NextRequest) {
     // Carry refreshed cookies and cache headers over to the redirect.
     const redirect = NextResponse.redirect(target);
     response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
-    ['cache-control', 'expires', 'pragma'].forEach((h) => {
+    CACHE_HEADERS.forEach((h) => {
       const v = response.headers.get(h);
       if (v) redirect.headers.set(h, v);
     });

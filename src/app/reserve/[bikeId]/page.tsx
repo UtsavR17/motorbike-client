@@ -5,6 +5,7 @@ import { ReserveForm } from '@/components/reservation/ReserveForm';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { PageIntro } from '@/components/ui/PageIntro';
 import { ProductImage } from '@/components/ui/ProductImage';
+import { RESERVE_IMAGE_SIZES } from '@/components/catalog/image-sizes';
 import { BIKE_DEPOSIT_PERCENT, RESERVATION_VALID_DAYS } from '@/config/shop';
 import { requireCustomer } from '@/lib/auth/session';
 import { getBikeForSale } from '@/lib/catalog/bikes';
@@ -85,7 +86,7 @@ export default async function ReservePage({ params }: { params: Promise<{ bikeId
         <div className="space-y-6">
           <section aria-labelledby="bike-heading" className="card overflow-hidden sm:flex">
             <div className="relative aspect-[4/3] sm:w-2/5 sm:shrink-0">
-              <ProductImage src={bike.image_url} alt={name} kind="bike" sizes="(min-width: 640px) 40vw, 100vw" preload />
+              <ProductImage src={bike.image_url} alt={name} kind="bike" sizes={RESERVE_IMAGE_SIZES} eager="high" />
             </div>
             <div className="p-5">
               <p className="text-sm font-medium uppercase tracking-wide text-ink-muted">{bike.brand}</p>

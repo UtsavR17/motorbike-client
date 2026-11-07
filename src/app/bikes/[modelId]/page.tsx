@@ -5,6 +5,7 @@ import { Bike as BikeIcon, CalendarClock, Store } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Breadcrumbs } from '@/components/ui/PageIntro';
 import { ProductImage } from '@/components/ui/ProductImage';
+import { DETAIL_IMAGE_SIZES } from '@/components/catalog/image-sizes';
 import { BIKE_DEPOSIT_PERCENT } from '@/config/shop';
 import { getBikeModel, listBikesForModel } from '@/lib/catalog/bikes';
 import { getModel } from '@/lib/catalog/lookups';
@@ -94,7 +95,7 @@ export default async function BikeDetailPage({ params }: BikePageProps) {
 
       <div className="mt-4 grid gap-6 lg:grid-cols-2 lg:gap-10">
         <div className="card relative aspect-[4/3] overflow-hidden">
-          <ProductImage src={base.image_url} alt={name} kind="bike" sizes="(min-width: 1024px) 50vw, 100vw" preload />
+          <ProductImage src={base.image_url} alt={name} kind="bike" sizes={DETAIL_IMAGE_SIZES} eager="high" />
         </div>
 
         <div className="space-y-5">
