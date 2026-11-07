@@ -5,10 +5,11 @@
 import { redirect } from 'next/navigation';
 import { AFTER_VERIFY, GOOGLE_AUTH_ENABLED, SITE_URL, verifyHref } from '@/lib/auth/config';
 import {
+  ACCOUNT_EXISTS_MSG,
+  classifySignUp,
   mapEmailSendError,
   mapLoginError,
   mapOtpError,
-  mapSignUpError,
   mapUpdatePasswordError,
 } from '@/lib/auth/errors';
 import { safeNext } from '@/lib/auth/redirect';
@@ -42,16 +43,16 @@ export async function registerAction(_prev: FormState, formData: FormData): Prom
   if (!parsed.success) return errorState(values, { fieldErrors: fieldErrorsFrom(parsed.error) });
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signUp({
+  const result = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
     options: { emailRedirectTo: CALLBACK_URL },
   });
-  if (error) {
-    const mapped = mapSignUpError(error);
-    // An existing account gets the same response as a new one.
-    if (mapped !== 'neutral') return errorState(values, mapped);
-  }
+  // DEC-11: an existing account is reported on the email field (no code is sent for it).
+  // Unconfirmed accounts still go to /verify. See classifySignUp for the trade-off.
+  const outcome = classifySignUp(result);
+  if (outcome === 'exists') return errorState(values, { fieldErrors: { email: ACCOUNT_EXISTS_MSG } });
+  if (outcome !== 'verify') return errorState(values, outcome);
   redirect(verifyHref(parsed.data.email, { next: optionalNext(raw.next) }));
 }
 

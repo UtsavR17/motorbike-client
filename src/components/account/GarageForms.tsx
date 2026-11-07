@@ -9,6 +9,7 @@ import { SubmitButton } from '@/components/forms/SubmitButton';
 import { useFormFeedback } from '@/components/forms/useFormFeedback';
 import { addBikeAction, deleteBikeAction, updateBikeAction } from '@/lib/actions/garage';
 import { BIKE_MIN_YEAR } from '@/config/shop';
+import { BIKE_HAS_APPOINTMENTS } from '@/lib/auth/errors';
 import { initialFormState } from '@/lib/forms';
 import type { CatalogModel } from '@/types/catalog';
 
@@ -108,10 +109,36 @@ export function BikeEditForm({
 
 /* -------------------------------- Delete --------------------------------- */
 
-/** Two-step delete: the first button asks for confirmation, the second submits. */
-export function DeleteBikeButton({ bikeId, name }: { bikeId: number; name: string }) {
+/**
+ * Two-step delete: the first button asks for confirmation, the second submits. Every outcome
+ * is shown in place as an alert that receives focus (ISS-10). Bikes with appointments cannot
+ * be deleted, so Delete is disabled with the reason (the server still refuses with 23503).
+ */
+export function DeleteBikeButton({ bikeId, name, hasAppointments = false }: {
+  bikeId: number;
+  name: string;
+  hasAppointments?: boolean;
+}) {
   const [state, action] = useActionState(deleteBikeAction, initialFormState);
+  const { messageRef } = useFormFeedback(state);
   const [confirming, setConfirming] = useState(false);
+  const reasonId = `bike-${bikeId}-delete-reason`;
+
+  if (hasAppointments) {
+    return (
+      <div className="w-full space-y-1 sm:w-auto">
+        <button type="button" disabled aria-describedby={reasonId}
+          className="btn h-10 cursor-not-allowed border border-line bg-card text-ink-muted opacity-70">
+          <Trash2 aria-hidden="true" className="h-4 w-4" />
+          Delete<span className="sr-only"> {name}</span>
+        </button>
+        <p id={reasonId} className="text-sm text-ink-muted">
+          {BIKE_HAS_APPOINTMENTS}{' '}
+          <Link href="/account/appointments" className="link">My appointments</Link>
+        </p>
+      </div>
+    );
+  }
 
   if (!confirming) {
     return (
@@ -119,9 +146,9 @@ export function DeleteBikeButton({ bikeId, name }: { bikeId: number; name: strin
         <button type="button" onClick={() => setConfirming(true)}
           className="btn h-10 border border-line bg-card text-bad hover:border-bad">
           <Trash2 aria-hidden="true" className="h-4 w-4" />
-          Delete
+          Delete<span className="sr-only"> {name}</span>
         </button>
-        <FormMessage state={state} />
+        <FormMessage state={state} ref={messageRef} />
       </div>
     );
   }
@@ -129,7 +156,7 @@ export function DeleteBikeButton({ bikeId, name }: { bikeId: number; name: strin
     <form action={action} className="w-full space-y-2 rounded-control border border-bad/40 bg-bad-soft p-3">
       <input type="hidden" name="bikeId" value={bikeId} />
       <p className="text-sm font-medium text-bad">Delete {name} from your garage? This cannot be undone.</p>
-      <FormMessage state={state} />
+      <FormMessage state={state} ref={messageRef} />
       <div className="flex flex-wrap gap-2">
         <SubmitButton pendingLabel="Deleting..." variant="dark">Yes, delete</SubmitButton>
         <button type="button" onClick={() => setConfirming(false)} className="btn-outline h-11" autoFocus>

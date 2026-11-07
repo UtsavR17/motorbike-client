@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Bike, Building2, CalendarClock, LayoutDashboard, LogOut, Package, ShieldCheck, UserRound } from 'lucide-react';
 import { signOutAction } from '@/lib/actions/auth';
+import { useCart } from '@/components/cart/CartProvider';
 
 const LINKS = [
   { href: '/account', label: 'Overview', Icon: LayoutDashboard, exact: true },
@@ -16,6 +17,8 @@ const LINKS = [
 ];
 
 export function AccountNav() {
+  // Sign-out removes this account's cart from the device (DEC-10).
+  const { clearOnSignOut } = useCart();
   const pathname = usePathname();
   return (
     <nav aria-label="Account" className="card p-2">
@@ -38,7 +41,7 @@ export function AccountNav() {
           );
         })}
         <li className="lg:mt-2 lg:border-t lg:border-line lg:pt-2">
-          <form action={signOutAction}>
+          <form action={signOutAction} onSubmit={clearOnSignOut}>
             <button
               type="submit"
               className="flex w-full items-center gap-2 rounded-control px-3 py-2 text-sm font-medium text-ink hover:bg-page"
