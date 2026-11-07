@@ -1,45 +1,70 @@
 'use client';
 
-import { createContext, useCallback, useContext, useMemo, useSyncExternalStore, type ReactNode } from 'react';
 import {
-  CART_STORAGE_KEY,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useSyncExternalStore,
+  type ReactNode,
+} from 'react';
+import {
   addLine,
   cartCount,
+  cartKey,
+  clearCartOncePerOrder,
+  clearOwnerCart,
   parseStoredCart,
   removeLine,
-  serializeCart,
   setLineQty,
+  syncCartOwner,
+  writeCart,
   type CartLine,
+  type KeyValueStore,
 } from '@/lib/cart/storage';
+import { createClient } from '@/lib/supabase/client';
 
 /* ------------------------- localStorage-backed store ------------------------ */
+// One cart per owner on this device (DEC-10): the signed-in user's id, or the guest.
 
 const listeners = new Set<() => void>();
 
-function readRaw(): string | null {
+function notify() {
+  listeners.forEach((l) => l());
+}
+
+/** window.localStorage, or null when storage is blocked (private mode, policies). */
+function storage(): KeyValueStore | null {
   try {
-    return window.localStorage.getItem(CART_STORAGE_KEY);
+    return window.localStorage;
   } catch {
-    return null; // Storage blocked (private mode, policies): behave as an empty cart.
+    return null;
   }
 }
 
-function writeLines(lines: CartLine[]) {
+function readRaw(ownerId: string | null): string | null {
   try {
-    if (lines.length === 0) window.localStorage.removeItem(CART_STORAGE_KEY);
-    else window.localStorage.setItem(CART_STORAGE_KEY, serializeCart(lines));
+    return storage()?.getItem(cartKey(ownerId)) ?? null;
+  } catch {
+    return null; // Behave as an empty cart.
+  }
+}
+
+function writeLines(ownerId: string | null, lines: CartLine[]) {
+  try {
+    const store = storage();
+    if (store) writeCart(store, ownerId, lines);
   } catch {
     // Ignore: the cart simply will not persist.
   }
-  listeners.forEach((l) => l());
+  notify();
 }
 
 function subscribe(listener: () => void) {
   listeners.add(listener);
-  // Keep tabs in sync.
-  const onStorage = (e: StorageEvent) => {
-    if (e.key === null || e.key === CART_STORAGE_KEY) listener();
-  };
+  // Keep tabs in sync (an owner's cart cleared in one tab empties the badge in the others).
+  const onStorage = () => listener();
   window.addEventListener('storage', onStorage);
   return () => {
     listeners.delete(listener);
@@ -61,38 +86,105 @@ interface CartApi {
   setQty(stockId: number, qty: number, maxQty?: number): void;
   remove(stockId: number): void;
   clear(): void;
+  /** Clears this owner's cart once per paid order (owner-scoped tracking). */
+  clearForOrder(orderId: number): void;
+  /** Called just before signing out: removes this account's cart from the device. */
+  clearOnSignOut(): void;
 }
 
 const CartContext = createContext<CartApi | null>(null);
 
-export function CartProvider({ children }: { children: ReactNode }) {
-  const raw = useSyncExternalStore(subscribe, readRaw, () => null);
+/**
+ * ownerId comes from the server layout (the signed-in user's id, or null for guests), so the
+ * browser makes no extra request to know whose cart to show.
+ */
+export function CartProvider({ ownerId, children }: { ownerId: string | null; children: ReactNode }) {
+  const getSnapshot = useCallback(() => readRaw(ownerId), [ownerId]);
+  const raw = useSyncExternalStore(subscribe, getSnapshot, () => null);
   const ready = useSyncExternalStore(noopSubscribe, () => true, () => false);
   const lines = useMemo(() => parseStoredCart(raw), [raw]);
 
-  const add = useCallback<CartApi['add']>((stockId, qty, price, maxQty) => {
-    const current = parseStoredCart(readRaw());
-    const existing = current.find((l) => l.stockId === stockId)?.qty ?? 0;
-    if (existing >= maxQty) return 'at_max';
-    const next = addLine(current, { stockId, qty: Math.min(qty, maxQty - existing), addedPrice: price });
-    if (!next) return 'full';
-    writeLines(next);
-    return 'added';
-  }, []);
+  // On load and whenever the owner changes: drop the legacy cart and a previous account's
+  // cart, and merge the guest cart into a signed-in user's cart.
+  useEffect(() => {
+    try {
+      const store = storage();
+      if (store && syncCartOwner(store, ownerId)) notify();
+    } catch {
+      // Storage unavailable: nothing to sync.
+    }
+  }, [ownerId]);
 
-  const setQty = useCallback<CartApi['setQty']>((stockId, qty, maxQty) => {
-    writeLines(setLineQty(parseStoredCart(readRaw()), stockId, qty, maxQty));
-  }, []);
+  // Second path for sign-out: the browser client reports SIGNED_OUT (for example after the
+  // session ends in another tab). The server path is clearOnSignOut + the owner change above.
+  useEffect(() => {
+    if (!ownerId) return;
+    let unsubscribe: (() => void) | undefined;
+    try {
+      const { data } = createClient().auth.onAuthStateChange((event) => {
+        if (event === 'SIGNED_OUT') {
+          const store = storage();
+          if (store) clearOwnerCart(store, ownerId);
+          notify();
+        }
+      });
+      unsubscribe = () => data.subscription.unsubscribe();
+    } catch {
+      // Supabase env missing in the browser: the owner-change path still applies.
+    }
+    return () => unsubscribe?.();
+  }, [ownerId]);
 
-  const remove = useCallback((stockId: number) => {
-    writeLines(removeLine(parseStoredCart(readRaw()), stockId));
-  }, []);
+  const add = useCallback<CartApi['add']>(
+    (stockId, qty, price, maxQty) => {
+      const current = parseStoredCart(readRaw(ownerId));
+      const existing = current.find((l) => l.stockId === stockId)?.qty ?? 0;
+      if (existing >= maxQty) return 'at_max';
+      const next = addLine(current, { stockId, qty: Math.min(qty, maxQty - existing), addedPrice: price });
+      if (!next) return 'full';
+      writeLines(ownerId, next);
+      return 'added';
+    },
+    [ownerId],
+  );
 
-  const clear = useCallback(() => writeLines([]), []);
+  const setQty = useCallback<CartApi['setQty']>(
+    (stockId, qty, maxQty) => writeLines(ownerId, setLineQty(parseStoredCart(readRaw(ownerId)), stockId, qty, maxQty)),
+    [ownerId],
+  );
+
+  const remove = useCallback(
+    (stockId: number) => writeLines(ownerId, removeLine(parseStoredCart(readRaw(ownerId)), stockId)),
+    [ownerId],
+  );
+
+  const clear = useCallback(() => writeLines(ownerId, []), [ownerId]);
+
+  const clearForOrder = useCallback(
+    (orderId: number) => {
+      try {
+        const store = storage();
+        if (store && clearCartOncePerOrder(store, ownerId, orderId)) notify();
+      } catch {
+        writeLines(ownerId, []);
+      }
+    },
+    [ownerId],
+  );
+
+  const clearOnSignOut = useCallback(() => {
+    try {
+      const store = storage();
+      if (store) clearOwnerCart(store, ownerId);
+    } catch {
+      // Ignore: the owner change after sign-out clears it as well.
+    }
+    notify();
+  }, [ownerId]);
 
   const value = useMemo<CartApi>(
-    () => ({ lines, count: cartCount(lines), ready, add, setQty, remove, clear }),
-    [lines, ready, add, setQty, remove, clear],
+    () => ({ lines, count: cartCount(lines), ready, add, setQty, remove, clear, clearForOrder, clearOnSignOut }),
+    [lines, ready, add, setQty, remove, clear, clearForOrder, clearOnSignOut],
   );
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

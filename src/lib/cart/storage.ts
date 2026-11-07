@@ -4,7 +4,14 @@
 
 import { MAX_CART_LINES, MAX_LINE_QTY } from '@/config/shop';
 
-export const CART_STORAGE_KEY = 'motohub-cart-v1';
+// Carts are stored on the device, one per account (DEC-10): "motohub-cart-v2:<userId>" for a
+// signed-in customer and "motohub-cart-v2:guest" for guests. They do not roam between devices.
+export const CART_KEY_PREFIX = 'motohub-cart-v2:';
+export const GUEST_OWNER = 'guest';
+/** Pre-v2 single cart (owner unknown): deleted on first load, never imported. */
+export const LEGACY_CART_KEY = 'motohub-cart-v1';
+/** The account whose cart was last shown on this device; used to clear it after sign-out. */
+export const LAST_OWNER_KEY = 'motohub-cart-owner';
 /** Ignore stored carts larger than this many characters (corrupt or tampered data). */
 const MAX_STORED_LENGTH = 10_000;
 
@@ -82,4 +89,100 @@ export function removeLine(lines: CartLine[], stockId: number): CartLine[] {
 
 export function cartCount(lines: CartLine[]): number {
   return lines.reduce((n, l) => n + l.qty, 0);
+}
+
+/* --------------------------- Per-owner storage --------------------------- */
+
+/** Minimal Storage interface (window.localStorage, or a fake in tests). */
+export interface KeyValueStore {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+  removeItem(key: string): void;
+}
+
+/** Storage key of an owner's cart; null or '' is the guest. */
+export function cartKey(ownerId: string | null | undefined): string {
+  return CART_KEY_PREFIX + (ownerId ? ownerId : GUEST_OWNER);
+}
+
+export function readCart(store: KeyValueStore, ownerId: string | null): CartLine[] {
+  return parseStoredCart(store.getItem(cartKey(ownerId)));
+}
+
+export function writeCart(store: KeyValueStore, ownerId: string | null, lines: CartLine[]): void {
+  if (lines.length === 0) store.removeItem(cartKey(ownerId));
+  else store.setItem(cartKey(ownerId), serializeCart(lines));
+}
+
+/** Guest lines added to the user's cart: quantities add up per stock id, line and cart limits apply. */
+export function mergeCarts(user: CartLine[], guest: CartLine[]): CartLine[] {
+  return normaliseCart([...user, ...guest]);
+}
+
+/**
+ * Brings the device in line with the current owner (call on load and whenever it changes):
+ * - deletes the legacy single cart (owner unknown, never imported);
+ * - deletes the cart of a previous signed-in owner that is no longer the current one
+ *   (sign-out, session expiry or another account signing in on this device);
+ * - for a signed-in owner, merges the guest cart into theirs and deletes the guest cart.
+ * Returns true when anything changed.
+ */
+export function syncCartOwner(store: KeyValueStore, ownerId: string | null): boolean {
+  let changed = false;
+  if (store.getItem(LEGACY_CART_KEY) !== null) {
+    store.removeItem(LEGACY_CART_KEY);
+    changed = true;
+  }
+  const previous = store.getItem(LAST_OWNER_KEY) || null;
+  if (previous && previous !== ownerId) {
+    if (store.getItem(cartKey(previous)) !== null) changed = true;
+    store.removeItem(cartKey(previous));
+    // Payment tracking belongs to that account too.
+    store.removeItem(clearedOrdersKey(previous));
+  }
+  if (ownerId) {
+    const guest = readCart(store, null);
+    if (guest.length > 0) {
+      writeCart(store, ownerId, mergeCarts(readCart(store, ownerId), guest));
+      store.removeItem(cartKey(null));
+      changed = true;
+    }
+    store.setItem(LAST_OWNER_KEY, ownerId);
+  } else if (previous) {
+    store.removeItem(LAST_OWNER_KEY);
+  }
+  return changed;
+}
+
+/** Clears the signed-in owner's cart on sign-out (before the page reloads). */
+export function clearOwnerCart(store: KeyValueStore, ownerId: string | null): void {
+  store.removeItem(cartKey(ownerId));
+  if (ownerId) {
+    store.removeItem(clearedOrdersKey(ownerId));
+    store.removeItem(LAST_OWNER_KEY);
+  }
+}
+
+/* ------------------- Cleared-once tracking after payment ------------------ */
+
+export function clearedOrdersKey(ownerId: string | null): string {
+  return `motohub-cart-cleared-orders:${ownerId ? ownerId : GUEST_OWNER}`;
+}
+
+/**
+ * Clears the owner's cart once per paid order. Returns true when it cleared now; a later visit
+ * to the same success page does not wipe a newer cart.
+ */
+export function clearCartOncePerOrder(store: KeyValueStore, ownerId: string | null, orderId: number): boolean {
+  let done: number[] = [];
+  try {
+    const parsed = JSON.parse(store.getItem(clearedOrdersKey(ownerId)) ?? '[]') as unknown;
+    done = Array.isArray(parsed) ? parsed.filter((n): n is number => typeof n === 'number') : [];
+  } catch {
+    done = [];
+  }
+  if (done.includes(orderId)) return false;
+  store.removeItem(cartKey(ownerId));
+  store.setItem(clearedOrdersKey(ownerId), JSON.stringify([...done, orderId].slice(-20)));
+  return true;
 }

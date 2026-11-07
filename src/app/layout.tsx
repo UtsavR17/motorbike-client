@@ -5,6 +5,7 @@ import { CartProvider } from '@/components/cart/CartProvider';
 import { SiteFooter } from '@/components/layout/SiteFooter';
 import { SiteHeader } from '@/components/layout/SiteHeader';
 import { SHOP_NAME, SHOP_TAGLINE } from '@/config/shop';
+import { getCurrentUser } from '@/lib/auth/session';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
@@ -15,7 +16,9 @@ export const metadata: Metadata = {
     'Browse new motorcycles, genuine spare parts with live stock levels, and workshop services.',
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  // Whose cart this device shows (DEC-10). getCurrentUser is cached per request (the header uses it too).
+  const user = await getCurrentUser();
   return (
     // suppressHydrationWarning: browser extensions inject attributes before React loads (dev-only warning, not an app bug).
     <html lang="en" className={inter.variable} suppressHydrationWarning>
@@ -26,7 +29,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         >
           Skip to content
         </a>
-        <CartProvider>
+        <CartProvider ownerId={user?.id ?? null}>
           <SiteHeader />
           <main id="main" className="flex-1">
             {children}

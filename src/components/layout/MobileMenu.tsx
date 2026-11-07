@@ -5,12 +5,15 @@ import { usePathname } from 'next/navigation';
 import { Bike, CalendarCheck, CalendarClock, LayoutDashboard, LogOut, Menu, Package, UserRound, UserRoundPlus, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { signOutAction } from '@/lib/actions/auth';
+import { useCart } from '@/components/cart/CartProvider';
 import { HeaderSearch } from './HeaderSearch';
 import { isActivePath } from './NavLinks';
 import { NAV_LINKS } from './nav';
 
 /** Hamburger menu for small screens: search, navigation and account links. */
 export function MobileMenu({ accountName }: { accountName: string | null }) {
+  // Sign-out removes this account's cart from the device (DEC-10).
+  const { clearOnSignOut } = useCart();
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -102,7 +105,7 @@ export function MobileMenu({ accountName }: { accountName: string | null }) {
                     </Link>
                   </li>
                   <li>
-                    <form action={signOutAction}>
+                    <form action={signOutAction} onSubmit={clearOnSignOut}>
                       <button type="submit" className={`${accountLink} w-full`}>
                         <LogOut aria-hidden="true" className="h-5 w-5" />
                         Sign out

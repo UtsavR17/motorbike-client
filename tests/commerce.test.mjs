@@ -4,7 +4,8 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 import {
-  CART_STORAGE_KEY,
+  LEGACY_CART_KEY,
+  cartKey,
   addLine,
   cartCount,
   clampQty,
@@ -23,7 +24,10 @@ import { handleStripeWebhook, orderIdFrom, paymentIntentIdFrom } from '../src/li
 /* --------------------------------- Cart ---------------------------------- */
 
 describe('cart storage', () => {
-  test('uses the versioned key', () => assert.equal(CART_STORAGE_KEY, 'motohub-cart-v1'));
+  test('uses per-owner v2 keys; v1 is legacy', () => {
+    assert.equal(cartKey(null), 'motohub-cart-v2:guest');
+    assert.equal(LEGACY_CART_KEY, 'motohub-cart-v1');
+  });
   test('malformed or hostile data gives an empty cart', () => {
     for (const raw of [null, '', 'not json', '{}', '"x"', '42', 'null', '[1,2', 'x'.repeat(20000)]) {
       assert.deepEqual(parseStoredCart(raw), [], String(raw).slice(0, 20));

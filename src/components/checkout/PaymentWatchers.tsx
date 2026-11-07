@@ -4,23 +4,15 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useCart } from '@/components/cart/CartProvider';
 
-const CLEARED_KEY = 'motohub-cart-cleared-orders';
-
-/** Clears the cart once per paid order (revisiting the page later does not wipe a new cart). */
+/**
+ * Clears the current owner's cart once per paid order (revisiting the page later does not wipe a
+ * new cart). The tracking is per owner, like the cart itself.
+ */
 export function ClearCartOnce({ orderId }: { orderId: number }) {
-  const { clear, ready } = useCart();
+  const { clearForOrder, ready } = useCart();
   useEffect(() => {
-    if (!ready) return;
-    try {
-      const done = JSON.parse(window.localStorage.getItem(CLEARED_KEY) ?? '[]') as unknown;
-      const list = Array.isArray(done) ? done.filter((n): n is number => typeof n === 'number') : [];
-      if (list.includes(orderId)) return;
-      clear();
-      window.localStorage.setItem(CLEARED_KEY, JSON.stringify([...list, orderId].slice(-20)));
-    } catch {
-      clear();
-    }
-  }, [orderId, clear, ready]);
+    if (ready) clearForOrder(orderId);
+  }, [orderId, clearForOrder, ready]);
   return null;
 }
 

@@ -5,9 +5,12 @@ import { usePathname } from 'next/navigation';
 import { Bike, ChevronDown, LayoutDashboard, LogOut, Package, UserRound } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { signOutAction } from '@/lib/actions/auth';
+import { useCart } from '@/components/cart/CartProvider';
 
 /** Signed-in header menu: Account, Garage and Sign out. */
 export function AccountMenu({ name }: { name: string }) {
+  // Sign-out removes this account's cart from the device (DEC-10).
+  const { clearOnSignOut } = useCart();
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -82,7 +85,7 @@ export function AccountMenu({ name }: { name: string }) {
             </Link>
           </li>
           <li className="mt-1 border-t border-line pt-1">
-            <form action={signOutAction}>
+            <form action={signOutAction} onSubmit={clearOnSignOut}>
               <button type="submit" className={itemClass}>
                 <LogOut aria-hidden="true" className="h-4 w-4" />
                 Sign out
