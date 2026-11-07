@@ -13,12 +13,14 @@ import { PageIntro } from '@/components/ui/PageIntro';
 import { Pagination, ResultCount } from '@/components/ui/Pagination';
 import { PAGE_SIZE } from '@/config/shop';
 import { getBikeFacets, listBikeModels } from '@/lib/catalog/bikes';
+import { emptyListing, resultsHeadline } from '@/lib/catalog/search-page';
 import { formatMoney } from '@/lib/format';
 import {
   BIKE_SORT_LABELS,
   BIKES_FORM_FIELDS,
   MAX_SEARCH_LENGTH,
   bikesLinks,
+  bikesWithoutFilters,
   parseBikesQuery,
   type BikesQuery,
   type SearchParams,
@@ -39,6 +41,11 @@ export default async function BikesPage({ searchParams }: { searchParams: Promis
   const links = bikesLinks(query);
   const result = await listBikeModels(query);
   if (result.outOfRange) redirect(links.page(result.pageCount));
+  // Only for an empty filtered page: would the same search find models without the filters?
+  const unfilteredTotal =
+    result.total === 0 && links.hasFilters ? (await listBikeModels(bikesWithoutFilters(query), 1)).total : 0;
+  const empty = emptyListing('motorcycles', query.q, links.hasFilters, unfilteredTotal);
+  const headline = resultsHeadline(result.total, query.q);
 
   const chips: FilterChip[] = [];
   if (query.q) chips.push({ key: 'q', label: `Search: "${query.q}"`, removeHref: links.remove('q') });
@@ -154,7 +161,10 @@ export default async function BikesPage({ searchParams }: { searchParams: Promis
             Results
           </h2>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <ResultCount page={result.page} pageSize={PAGE_SIZE} total={result.total} />
+            <div>
+              {headline && <p className="font-semibold">{headline}</p>}
+              <ResultCount page={result.page} pageSize={PAGE_SIZE} total={result.total} />
+            </div>
             <SortLinks
               current={query.sort}
               options={BIKE_SORT_LABELS}
@@ -169,21 +179,25 @@ export default async function BikesPage({ searchParams }: { searchParams: Promis
           />
 
           {result.items.length === 0 ? (
-            <EmptyState
-              icon={Bike}
-              title={chips.length > 0 ? 'No motorcycles match your filters' : 'No motorcycles in stock right now'}
-              action={
-                chips.length > 0 ? (
-                  <Link href={links.hasFilters ? links.clearFilters : links.clearSearch} className="btn-dark">
-                    {links.hasFilters ? 'Clear filters' : 'Clear search'}
-                  </Link>
-                ) : undefined
-              }
-            >
-              {chips.length > 0
-                ? 'Try another brand, fuel type or a wider price range.'
-                : 'New stock arrives regularly. Please check back soon.'}
-            </EmptyState>
+            chips.length === 0 ? (
+              <EmptyState icon={Bike} title="No motorcycles in stock right now">
+                New stock arrives regularly. Please check back soon.
+              </EmptyState>
+            ) : (
+              <EmptyState
+                icon={Bike}
+                title={empty.title}
+                action={
+                  empty.action && (
+                    <Link href={empty.action === 'clearFilters' ? links.clearFilters : links.clearSearch} className="btn-dark">
+                      {empty.action === 'clearFilters' ? 'Clear filters' : 'Clear search'}
+                    </Link>
+                  )
+                }
+              >
+                {empty.body}
+              </EmptyState>
+            )
           ) : (
             <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {result.items.map((model) => (

@@ -55,3 +55,54 @@ export function searchSections<B, P>(
     bothEmpty: bikes.total === 0 && parts.total === 0,
   };
 }
+
+/* ------------------------- Listing result messages ------------------------- */
+
+/** "3 results for "honda"" above a listing, or null without a search. */
+export function resultsHeadline(total: number, q: string | undefined): string | null {
+  if (!q) return null;
+  return `${total} result${total === 1 ? '' : 's'} for "${q}"`;
+}
+
+export interface EmptyListing {
+  title: string;
+  body: string;
+  action: 'clearFilters' | 'clearSearch' | null;
+}
+
+/**
+ * The message for an empty listing. When the filters hide matches that exist without them,
+ * say so and offer "Clear filters" (which keeps the search). `unfilteredTotal` is the count with
+ * the same search but no filters, fetched only when the page is empty and filters are active.
+ */
+export function emptyListing(
+  noun: 'parts' | 'motorcycles',
+  q: string | undefined,
+  hasFilters: boolean,
+  unfilteredTotal: number,
+): EmptyListing {
+  if (hasFilters && unfilteredTotal > 0) {
+    const matches = q
+      ? unfilteredTotal === 1
+        ? ` 1 ${noun.replace(/s$/, '')} matches "${q}" without them.`
+        : ` ${unfilteredTotal} ${noun} match "${q}" without them.`
+      : '';
+    return {
+      title: 'No results with these filters',
+      body: `Try clearing filters.${matches}`,
+      action: 'clearFilters',
+    };
+  }
+  if (q) {
+    return {
+      title: `No ${noun} match "${q}"`,
+      body: 'Check the spelling or try fewer words, for example a brand or a part name.',
+      action: 'clearSearch',
+    };
+  }
+  return {
+    title: `No ${noun} match your filters`,
+    body: 'Try a wider price range or remove a filter.',
+    action: hasFilters ? 'clearFilters' : null,
+  };
+}

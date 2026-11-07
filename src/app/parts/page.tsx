@@ -15,6 +15,7 @@ import { PAGE_SIZE } from '@/config/shop';
 import { getGarageChips } from '@/lib/account/garage';
 import { getBrands, getCategories, getModels } from '@/lib/catalog/lookups';
 import { listPartProducts } from '@/lib/catalog/parts';
+import { emptyListing, resultsHeadline } from '@/lib/catalog/search-page';
 import { formatMoney } from '@/lib/format';
 import { modelLabel } from '@/lib/labels';
 import {
@@ -23,6 +24,7 @@ import {
   PART_SORT_LABELS,
   parsePartsQuery,
   partsLinks,
+  partsWithoutFilters,
   type PartsQuery,
   type SearchParams,
 } from '@/lib/params';
@@ -57,6 +59,11 @@ export default async function PartsPage({ searchParams }: { searchParams: Promis
   const links = partsLinks(query);
   const result = await listPartProducts(query);
   if (result.outOfRange) redirect(links.page(result.pageCount));
+  // Only for an empty filtered page: would the same search find parts without the filters?
+  const unfilteredTotal =
+    result.total === 0 && links.hasFilters ? (await listPartProducts(partsWithoutFilters(query), 1)).total : 0;
+  const empty = emptyListing('parts', query.q, links.hasFilters, unfilteredTotal);
+  const headline = resultsHeadline(result.total, query.q);
 
   const fitsLabel = model
     ? `Fits: ${modelLabel(model.brand, model.model)}${query.year ? ` (${query.year})` : ''}`
@@ -204,7 +211,10 @@ export default async function PartsPage({ searchParams }: { searchParams: Promis
             Results
           </h2>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <ResultCount page={result.page} pageSize={PAGE_SIZE} total={result.total} />
+            <div>
+              {headline && <p className="font-semibold">{headline}</p>}
+              <ResultCount page={result.page} pageSize={PAGE_SIZE} total={result.total} />
+            </div>
             <SortLinks
               current={query.sort}
               options={PART_SORT_LABELS}
@@ -235,14 +245,16 @@ export default async function PartsPage({ searchParams }: { searchParams: Promis
             ) : (
               <EmptyState
                 icon={PackageSearch}
-                title="No parts match your filters"
+                title={empty.title}
                 action={
-                  <Link href={links.hasFilters ? links.clearFilters : links.clearSearch} className="btn-dark">
-                    {links.hasFilters ? 'Clear filters' : 'Clear search'}
-                  </Link>
+                  empty.action && (
+                    <Link href={empty.action === 'clearFilters' ? links.clearFilters : links.clearSearch} className="btn-dark">
+                      {empty.action === 'clearFilters' ? 'Clear filters' : 'Clear search'}
+                    </Link>
+                  )
                 }
               >
-                Try a different search term, widen the price range or remove a filter.
+                {empty.body}
               </EmptyState>
             )
           ) : (

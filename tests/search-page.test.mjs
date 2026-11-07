@@ -65,3 +65,50 @@ describe('search page wiring', () => {
     assert.match(header, /name="q"/);
   });
 });
+
+describe('listing result messages', () => {
+  test('headline: "N results for <q>" only with a search', async () => {
+    const { resultsHeadline } = await import('../src/lib/catalog/search-page.ts');
+    assert.equal(resultsHeadline(3, 'honda'), '3 results for "honda"');
+    assert.equal(resultsHeadline(1, 'r2'), '1 result for "r2"');
+    assert.equal(resultsHeadline(0, 'xyz'), '0 results for "xyz"');
+    assert.equal(resultsHeadline(5, undefined), null);
+  });
+
+  test('filters hide matches: suggest clearing filters (search kept)', async () => {
+    const { emptyListing } = await import('../src/lib/catalog/search-page.ts');
+    assert.deepEqual(emptyListing('parts', 'yamaha', true, 2), {
+      title: 'No results with these filters',
+      body: 'Try clearing filters. 2 parts match "yamaha" without them.',
+      action: 'clearFilters',
+    });
+    assert.equal(emptyListing('motorcycles', 'r2', true, 1).body, 'Try clearing filters. 1 motorcycle matches "r2" without them.');
+    assert.equal(emptyListing('parts', undefined, true, 7).body, 'Try clearing filters.');
+  });
+
+  test('nothing matches the search at all: suggest another search', async () => {
+    const { emptyListing } = await import('../src/lib/catalog/search-page.ts');
+    const empty = emptyListing('parts', 'xyzzy', true, 0);
+    assert.equal(empty.title, 'No parts match "xyzzy"');
+    assert.equal(empty.action, 'clearSearch');
+    assert.equal(emptyListing('motorcycles', 'xyzzy', false, 0).action, 'clearSearch');
+  });
+
+  test('filters only, nothing at all: clear filters', async () => {
+    const { emptyListing } = await import('../src/lib/catalog/search-page.ts');
+    assert.deepEqual(emptyListing('motorcycles', undefined, true, 0), {
+      title: 'No motorcycles match your filters',
+      body: 'Try a wider price range or remove a filter.',
+      action: 'clearFilters',
+    });
+  });
+
+  test('the listings fetch the unfiltered count only for an empty filtered page', () => {
+    for (const [path, fn] of [['src/app/parts/page.tsx', 'listPartProducts(partsWithoutFilters(query), 1)'],
+                              ['src/app/bikes/page.tsx', 'listBikeModels(bikesWithoutFilters(query), 1)']]) {
+      const src = readFileSync(path, 'utf8');
+      assert.ok(src.includes(`result.total === 0 && links.hasFilters ? (await ${fn}).total : 0`), path);
+      assert.ok(src.includes('resultsHeadline(result.total, query.q)'), path);
+    }
+  });
+});
