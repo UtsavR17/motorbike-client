@@ -15,7 +15,8 @@ import {
   resetPasswordAction,
   verifyAction,
 } from '@/lib/actions/auth';
-import { RESEND_COOLDOWN_SECONDS } from '@/lib/auth/config';
+import { RESEND_COOLDOWN_SECONDS, loginHref } from '@/lib/auth/config';
+import { ACCOUNT_EXISTS_MSG } from '@/lib/auth/errors';
 import { initialFormState } from '@/lib/forms';
 
 const PASSWORD_HINT = '8 to 72 characters, with at least one letter and one number.';
@@ -30,8 +31,16 @@ export function RegisterForm({ next }: { next?: string }) {
     <form ref={formRef} action={action} noValidate className="space-y-4">
       <FormMessage state={state} ref={messageRef} />
       {next && <input type="hidden" name="next" value={next} />}
-      <Field name="email" label="Email" type="email" autoComplete="email" maxLength={100} required
-        defaultValue={state.values?.email} error={e.email} />
+      <div>
+        <Field name="email" label="Email" type="email" autoComplete="email" maxLength={100} required
+          defaultValue={state.values?.email} error={e.email} />
+        {e.email === ACCOUNT_EXISTS_MSG && (
+          <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+            <Link href={loginHref(next)} className="link">Sign in</Link>
+            <Link href="/forgot-password" className="link">Reset your password</Link>
+          </p>
+        )}
+      </div>
       <Field name="password" label="Password" type="password" autoComplete="new-password" maxLength={72} required
         hint={PASSWORD_HINT} error={e.password} />
       <Field name="confirmPassword" label="Confirm password" type="password" autoComplete="new-password"

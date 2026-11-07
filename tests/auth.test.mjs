@@ -4,10 +4,12 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 import {
+  ACCOUNT_EXISTS_MSG,
   BIKE_HAS_APPOINTMENTS,
   BIKE_TAKEN,
   NIC_TAKEN,
   PHONE_TAKEN,
+  classifySignUp,
   mapBikeError,
   mapEmailSendError,
   mapLoginError,
@@ -281,5 +283,34 @@ describe('profile update and bike error mapping', () => {
       /registration number and year/,
     );
     assert.ok(mapBikeError('add', { code: '42501' }).message);
+  });
+});
+
+describe('classifySignUp (DEC-11)', () => {
+  const fakeUser = (identities) => ({ data: { user: { id: 'x', identities }, session: null }, error: null });
+
+  test('existing confirmed account: obfuscated user with empty identities', () => {
+    assert.equal(classifySignUp(fakeUser([])), 'exists');
+  });
+
+  test('existing account reported by error code (confirm email off)', () => {
+    assert.equal(classifySignUp({ data: { user: null }, error: { code: 'user_already_exists', status: 422 } }), 'exists');
+    assert.equal(classifySignUp({ data: { user: null }, error: { code: 'email_exists', status: 422 } }), 'exists');
+  });
+
+  test('new user and existing unconfirmed user go to verify', () => {
+    assert.equal(classifySignUp(fakeUser([{ provider: 'email' }])), 'verify');
+    assert.equal(classifySignUp({ data: { user: { id: 'y' } }, error: null }), 'verify');
+  });
+
+  test('other errors keep their mapped message', () => {
+    const rate = classifySignUp({ data: null, error: { code: 'over_email_send_rate_limit', status: 429 } });
+    assert.equal(rate.message, 'Too many attempts. Please wait a minute and try again.');
+    const weak = classifySignUp({ data: null, error: { code: 'weak_password' } });
+    assert.ok(weak.fieldErrors.password);
+  });
+
+  test('the message wording', () => {
+    assert.equal(ACCOUNT_EXISTS_MSG, 'An account with this email already exists. Sign in or reset your password.');
   });
 });

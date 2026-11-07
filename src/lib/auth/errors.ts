@@ -40,6 +40,38 @@ export function mapSignUpError(e: ErrorLike): Mapped | 'neutral' {
   return { message: 'We could not create your account right now. Please try again.' };
 }
 
+export const ACCOUNT_EXISTS_MSG = 'An account with this email already exists. Sign in or reset your password.';
+
+export interface SignUpResultLike {
+  data?: { user?: { identities?: unknown[] | null } | null } | null;
+  error?: ErrorLike | null;
+}
+
+/**
+ * Classifies a signUp result (DEC-11).
+ * - 'exists': the email already belongs to a confirmed account. With "Confirm email" on,
+ *   Supabase returns an obfuscated user with an EMPTY identities array (and no error) for an
+ *   existing confirmed user; with it off it returns user_already_exists / email_exists.
+ *   Banned (deactivated) accounts are confirmed accounts too, so they also land here.
+ * - 'verify': a new user, or an existing unconfirmed one (identities present): go to /verify,
+ *   where the code can be resent.
+ * - Mapped: any other error (rate limit, weak password, ...).
+ *
+ * Deliberate trade-off (DEC-11): registration tells the visitor that an email is registered, so
+ * people are not left waiting for a code that never comes. Login and password reset stay neutral.
+ */
+export function classifySignUp(result: SignUpResultLike): 'exists' | 'verify' | Mapped {
+  const error = result.error;
+  if (error) {
+    if (error.code === 'user_already_exists' || error.code === 'email_exists') return 'exists';
+    const mapped = mapSignUpError(error);
+    return mapped === 'neutral' ? 'exists' : mapped;
+  }
+  const identities = result.data?.user?.identities;
+  if (Array.isArray(identities) && identities.length === 0) return 'exists';
+  return 'verify';
+}
+
 /** signInWithPassword: everything except "not confirmed" and rate limits is generic. */
 export function mapLoginError(e: ErrorLike): Mapped | 'unconfirmed' {
   if (e.code === 'email_not_confirmed' || /email not confirmed/i.test(e.message ?? '')) return 'unconfirmed';
