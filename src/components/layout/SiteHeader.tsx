@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Bike, CalendarCheck, UserRound } from 'lucide-react';
+import { CalendarCheck, UserRound } from 'lucide-react';
 import { CartBadge } from '@/components/cart/CartBadge';
 import { SHOP_NAME } from '@/config/shop';
 import { displayName, getCurrentUser, getCustomerOrNull } from '@/lib/auth/session';
@@ -10,11 +10,8 @@ import { NavLinks } from './NavLinks';
 
 export function Logo() {
   return (
-    <Link href="/" className="flex items-center gap-2 rounded-control text-white">
-      <span className="flex h-9 w-9 items-center justify-center rounded-control bg-accent text-ink">
-        <Bike aria-hidden="true" className="h-5 w-5" />
-      </span>
-      <span className="text-lg font-bold tracking-tight">{SHOP_NAME}</span>
+    <Link href="/" className="rounded-control text-lg font-bold tracking-tight text-white">
+      {SHOP_NAME}
     </Link>
   );
 }
